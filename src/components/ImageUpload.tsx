@@ -1,0 +1,129 @@
+import React, { useState, useRef } from 'react';
+import { Upload, X, Loader2, AlertCircle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+interface ImageUploadProps {
+  bucket: string;
+  folder?: string;
+  onUploadComplete: (urls: string[]) => void;
+  maxFiles?: number;
+  label?: string;
+}
+
+export default function ImageUpload({ 
+  bucket, 
+  folder = 'uploads', 
+  onUploadComplete, 
+  maxFiles = 1,
+  label = 'Upload'
+}: ImageUploadProps) {
+  const [uploading, setUploading] = useState(false);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (previews.length + files.length > maxFiles) {
+      setError(`Maximum ${maxFiles} files allowed.`);
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+    const uploadedUrls: string[] = [];
+
+    for (const file of files) {
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+        const filePath = folder ? `${folder}/${fileName}` : fileName;
+
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+          throw new Error("Please sign in to upload files.");
+        }
+
+        const { error: uploadError } = await supabase.storage
+          .from(bucket)
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from(bucket)
+          .getPublicUrl(filePath);
+
+        uploadedUrls.push(publicUrl);
+        setPreviews(prev => [...prev, publicUrl]);
+      } catch (err: any) {
+        console.error('Upload error:', err);
+        setError(`Upload failed: ${err.message}`);
+      }
+    }
+
+    onUploadComplete(uploadedUrls);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeImage = async (url: string) => {
+    setPreviews(prev => prev.filter(p => p !== url));
+    onUploadComplete(previews.filter(p => p !== url));
+  };
+
+  return (
+    <div className="space-y-3">
+      {error && (
+        <div className="bg-red-50 border border-red-100 px-3 py-2 rounded-xl flex items-center gap-2 text-red-500 text-[10px] font-semibold">
+          <AlertCircle size={12} />
+          {error}
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {previews.map((url, idx) => (
+          <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-100 group shadow-sm bg-slate-50">
+            <img src={url} alt="Preview" className="w-full h-full object-cover" />
+            <button 
+              onClick={() => removeImage(url)}
+              type="button"
+              className="absolute top-1 right-1 p-0.5 bg-black/50 text-white rounded-md opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500"
+            >
+              <X size={10} />
+            </button>
+          </div>
+        ))}
+        
+        {previews.length < maxFiles && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            type="button"
+            className="w-16 h-16 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-indigo-300 transition-all flex flex-col items-center justify-center gap-1 group"
+          >
+            {uploading ? (
+              <Loader2 size={18} className="text-indigo-500 animate-spin" />
+            ) : (
+              <>
+                <Upload size={14} className="text-slate-400 group-hover:text-indigo-500" />
+                <span className="text-[7px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+              </>
+            )}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              multiple={maxFiles > 1}
+              accept="image/*,application/pdf" 
+              className="hidden" 
+            />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

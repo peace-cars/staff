@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Modern Desktop Palette - Professional & Solid */
+  --color-bg-base: #F1F3F9;
+  --color-bg-sidebar: #FFFFFF;
+  --color-surface-card: #FFFFFF;
+  --color-surface-hover: #F8FAFC;
+  
+  /* Primary Accents - Professional Indigo */
+  --color-primary-main: #4F46E5;
+  --color-primary-subtle: #EEF2FF;
+  --color-accent-teal: #0D9488;
+  
+  /* Text */
+  --color-text-main: #1E293B;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
+  
+  /* Borders & Shadows */
+  --color-border-subtle: #E2E8F0;
+  --color-shadow-native: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+.dark {
+  /* Modern Dark Palette */
+  --color-bg-base: #0F172A;
+  --color-bg-sidebar: #1E293B;
+  --color-surface-card: #1E293B;
+  --color-surface-hover: #334155;
+  
+  /* Primary Accents */
+  --color-primary-main: #818CF8;
+  --color-primary-subtle: #312E81;
+  --color-accent-teal: #2DD4BF;
+  
+  /* Text */
+  --color-text-main: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #64748B;
+  
+  /* Borders */
+  --color-border-subtle: #334155;
+}
+
+@theme {
+  --color-bg-base: var(--color-bg-base);
+  --color-bg-sidebar: var(--color-bg-sidebar);
+  --color-surface-card: var(--color-surface-card);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-primary-main: var(--color-primary-main);
+  --color-primary-subtle: var(--color-primary-subtle);
+  --color-accent-teal: var(--color-accent-teal);
+  --color-text-main: var(--color-text-main);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-border-subtle: var(--color-border-subtle);
+}
+
+body {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-main);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+  overscroll-behavior-y: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text-main);
+}
+
+/* Native UI Utility Classes */
+.native-card {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  box-shadow: var(--color-shadow-native);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.native-card:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.kinetic-gradient {
+  background: var(--color-primary-main);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
