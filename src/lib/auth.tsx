@@ -1,7 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 
-const API_URL = 'http://localhost:3000';
+import { Capacitor } from '@capacitor/core';
+
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (Capacitor.getPlatform() === 'android') return 'http://10.0.2.2:3000';
+  return 'http://localhost:3000';
+};
+
+const API_URL = getApiUrl();
 
 interface UserProfile {
   id: string;
