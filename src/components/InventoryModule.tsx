@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../lib/auth';
 import { cn } from '../lib/utils';
 import ImageUpload from './ImageUpload';
+import { fetchWithCache } from '../lib/cache';
 
 export default function InventoryModule() {
   const { session } = useAuth();
@@ -32,14 +33,14 @@ export default function InventoryModule() {
     if (!session) return;
     try {
       // Leveraging backend scoping: Staff token returns only their branch
-      const res = await fetch('http://localhost:3000/vehicles', {
+      await fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/vehicles`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
+      }, (data) => {
+        setVehicles(Array.isArray(data) ? data : []);
+        setIsLoading(false);
       });
-      const data = await res.json();
-      setVehicles(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -57,7 +58,7 @@ export default function InventoryModule() {
         branchId: session.profile.location_id // Automated scoping injection
       };
 
-      const res = await fetch('http://localhost:3000/vehicles', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/vehicles`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -90,27 +91,27 @@ export default function InventoryModule() {
 
   const InputField = ({ label, ...props }: any) => (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+      <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest ml-1">{label}</label>
       <input
         {...props}
-        className="w-full bg-slate-50 border border-slate-100 px-4 py-3.5 rounded-xl text-sm text-slate-900 font-medium focus:outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-slate-300"
+        className="w-full bg-bg-base border border-border-subtle px-4 py-3.5 rounded-xl text-sm text-text-main font-medium focus:outline-none focus:border-primary-main focus:ring-1 focus:ring-primary-main/20 transition-all placeholder:text-text-muted/30"
       />
     </div>
   );
 
-  return (
+    return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-12">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Node Inventory</h1>
-          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest leading-none flex items-center gap-2">
-            <Building2 size={14} className="text-indigo-500" /> Regional Assets Control
+          <h1 className="text-2xl font-bold text-text-main tracking-tight">Node Inventory</h1>
+          <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest leading-none flex items-center gap-2">
+            <Building2 size={14} className="text-primary-main" /> Regional Assets Control
           </p>
         </div>
         <button 
           onClick={() => setShowAddForm(true)}
-          className="w-11 h-11 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20 hover:bg-indigo-500 active:scale-95 transition-all"
+          className="w-11 h-11 bg-primary-main text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary-main/20 hover:bg-primary-main/90 active:scale-95 transition-all"
         >
           <Plus size={20} />
         </button>
@@ -119,21 +120,21 @@ export default function InventoryModule() {
       {/* Search & Stats */}
       <div className="space-y-3">
         <div className="relative">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
           <input 
             type="text"
             placeholder="Search regional units..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 pl-11 pr-4 text-sm font-medium text-slate-900 focus:outline-none focus:border-indigo-200 transition-all placeholder:text-slate-300"
+            className="w-full bg-surface-card border border-border-subtle rounded-xl py-3 pl-11 pr-4 text-sm font-medium text-text-main focus:outline-none focus:border-primary-main transition-all placeholder:text-text-muted"
           />
         </div>
-        <div className="ios-card p-4 flex items-center justify-between border-indigo-100/50 bg-indigo-50/30">
+        <div className="native-card p-4 flex items-center justify-between border-border-subtle bg-surface-card shadow-sm">
           <div>
-            <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Branch Visibility</p>
-            <p className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">{vehicles.length} Units</p>
+            <p className="text-[9px] font-bold text-primary-main uppercase tracking-widest">Branch Visibility</p>
+            <p className="text-2xl font-bold text-text-main tracking-tight mt-0.5">{vehicles.length} Units</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+          <div className="w-10 h-10 rounded-xl bg-primary-subtle flex items-center justify-center text-primary-main">
             <ShieldCheck size={20} />
           </div>
         </div>
@@ -143,55 +144,57 @@ export default function InventoryModule() {
       <div className="space-y-3">
         {isLoading ? (
           <div className="py-20 flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-2 border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Syncing Matrix...</p>
+            <div className="w-10 h-10 border-2 border-primary-subtle border-t-primary-main rounded-full animate-spin" />
+            <p className="text-text-muted font-bold uppercase tracking-widest text-[9px]">Syncing Matrix...</p>
           </div>
         ) : filteredVehicles.length === 0 ? (
-          <div className="py-20 text-center ios-card bg-slate-50/50 border-dashed">
-            <Package className="mx-auto mb-3 text-slate-200" size={32} />
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">No units at this coordinate</p>
+          <div className="py-20 text-center native-card bg-surface-card border-dashed border-border-subtle">
+            <Package className="mx-auto mb-3 text-text-muted/30" size={32} />
+            <p className="text-text-muted font-bold uppercase tracking-widest text-[9px]">No units at this coordinate</p>
           </div>
         ) : (
           filteredVehicles.map(vehicle => (
             <div 
               key={vehicle.id}
-              className="ios-card ios-shadow p-5 group transition-all hover:scale-[1.01]"
+              className="native-card p-5 group transition-all hover:scale-[1.01] bg-surface-card shadow-lg shadow-black/5"
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex gap-3">
-                  <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-indigo-500 group-hover:scale-105 transition-transform">
+                  <div className="w-10 h-10 bg-surface-hover rounded-xl flex items-center justify-center text-primary-main group-hover:scale-105 transition-transform">
                     {vehicle.fuel === 'ELECTRIC' ? <Zap size={18} /> : <Fuel size={18} />}
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">
+                    <h3 className="text-base font-bold text-text-main tracking-tight leading-tight group-hover:text-primary-main transition-colors">
                       {vehicle.make} {vehicle.model}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{vehicle.year}</span>
-                      <span className="w-1 h-1 bg-slate-200 rounded-full" />
-                      <span className="text-indigo-500 text-[9px] font-bold uppercase tracking-wider">{vehicle.duty?.replace('_', ' ')}</span>
+                      <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest">{vehicle.year}</span>
+                      <span className="w-1 h-1 bg-border-subtle rounded-full" />
+                      <span className="text-primary-main text-[9px] font-bold uppercase tracking-wider">{vehicle.duty?.replace('_', ' ')}</span>
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-base font-bold text-slate-900 tracking-tight">{(vehicle.retail_price_etb || 0).toLocaleString()} <span className="text-[9px] text-slate-400">ETB</span></p>
+                  <p className="text-base font-bold text-text-main tracking-tight">{(vehicle.retail_price_etb || 0).toLocaleString()} <span className="text-[9px] text-text-muted">ETB</span></p>
                   <span className={cn(
-                    "text-[8px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider",
-                    vehicle.status === 'SHOWROOM' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                    "text-[8px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider border",
+                    vehicle.status === 'SHOWROOM' 
+                      ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                      : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                   )}>
                     {vehicle.status}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-slate-50">
+              <div className="flex items-center justify-between pt-3 border-t border-border-subtle">
                 <div className="flex items-center gap-2">
-                  <Activity size={12} className="text-slate-300" />
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">VIN: {vehicle.vin_chassis || 'N/A'}</span>
+                  <Activity size={12} className="text-text-muted/50" />
+                  <span className="text-[9px] font-bold text-text-secondary uppercase tracking-wider">VIN: {vehicle.vin_chassis || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                   <Building2 size={12} className="text-indigo-400" />
-                   <span className="text-[9px] font-bold text-slate-300 uppercase tracking-wider">{vehicle.branches?.name || 'Local'}</span>
+                   <Building2 size={12} className="text-primary-main/60" />
+                   <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">{vehicle.branches?.name || 'Local'}</span>
                 </div>
               </div>
             </div>
@@ -208,14 +211,14 @@ export default function InventoryModule() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 100 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-[2rem] p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="bg-surface-card w-full sm:max-w-md sm:rounded-2xl rounded-t-[2rem] p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto border border-border-subtle"
             >
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 tracking-tight">Asset Registration</h2>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Automated Branch Injection Enabled</p>
+                  <h2 className="text-xl font-bold text-text-main tracking-tight">Asset Registration</h2>
+                  <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest mt-0.5">Automated Branch Injection Enabled</p>
                 </div>
-                <button onClick={() => setShowAddForm(false)} className="p-2 bg-slate-50 rounded-xl text-slate-400 hover:bg-slate-100 transition-all">
+                <button onClick={() => setShowAddForm(false)} className="p-2 bg-surface-hover rounded-xl text-text-secondary hover:bg-surface-hover/80 transition-all">
                   <X size={18} />
                 </button>
               </div>
@@ -232,11 +235,11 @@ export default function InventoryModule() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Fuel Type</label>
+                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest ml-1">Fuel Type</label>
                   <select 
                     value={formData.fuelType} 
                     onChange={e => setFormData({...formData, fuelType: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-100 px-4 py-3.5 rounded-xl text-sm text-slate-900 font-medium focus:outline-none focus:border-indigo-300 transition-all"
+                    className="w-full bg-bg-base border border-border-subtle px-4 py-3.5 rounded-xl text-sm text-text-main font-medium focus:outline-none focus:border-primary-main transition-all"
                   >
                     <option value="ELECTRIC">Electric</option>
                     <option value="PETROL">Petrol</option>
@@ -246,7 +249,7 @@ export default function InventoryModule() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Duty Status</label>
+                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest ml-1">Duty Status</label>
                   <div className="grid grid-cols-2 gap-3">
                     {['DUTY_PAID', 'DUTY_FREE'].map(status => (
                       <button
@@ -256,8 +259,8 @@ export default function InventoryModule() {
                         className={cn(
                           "py-3 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all",
                           formData.dutyStatus === status 
-                            ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20" 
-                            : "bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100"
+                            ? "bg-primary-main border-primary-main text-white shadow-lg shadow-primary-main/20" 
+                            : "bg-bg-base border-border-subtle text-text-secondary hover:bg-surface-hover"
                         )}
                       >
                         {status.replace('_', ' ')}
@@ -269,7 +272,7 @@ export default function InventoryModule() {
                 <InputField label="VIN / Chassis" value={formData.vin} onChange={(e: any) => setFormData({...formData, vin: e.target.value})} placeholder="Optional" />
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Vehicle Photos</label>
+                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest ml-1">Vehicle Photos</label>
                   <ImageUpload 
                     bucket="vehicles" 
                     folder="gallery" 
@@ -281,7 +284,7 @@ export default function InventoryModule() {
 
                 <button 
                   type="submit"
-                  className="w-full kinetic-gradient text-white py-4 font-bold rounded-xl text-sm hover:opacity-90 transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-widest italic"
+                  className="w-full bg-primary-main text-white py-4 font-bold rounded-xl text-sm hover:opacity-90 transition-all shadow-lg shadow-primary-main/20 active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-widest"
                 >
                   <Save size={16} /> Push to Local Node
                 </button>

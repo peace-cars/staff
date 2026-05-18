@@ -10,6 +10,7 @@ import InventoryModule from '../components/InventoryModule';
 import { ModernLeadCard } from '../components/ui/ModernLeadCard';
 import NegotiationWidget from '../components/NegotiationWidget';
 import { cn } from '../lib/utils';
+import { fetchWithCache, apiCache } from '../lib/cache';
 
 interface DashboardProps {
   activeTab?: 'leads' | 'tasks' | 'budget' | 'performance' | 'team' | 'inventory';
@@ -20,8 +21,16 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
   const { session, logout } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [leads, setLeads] = useState<any[]>([]);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [isSyncing, setIsSyncing] = useState(true);
+  
+  // Attempt synchronous cache read to prevent UI flicker
+  const initialSyncState = (() => {
+    if (!session) return true;
+    const perfCached = apiCache.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-performance/me_GET_""`);
+    const leadsCached = apiCache.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests_GET_""`);
+    return !(perfCached && leadsCached);
+  })();
+
+  const [isSyncing, setIsSyncing] = useState(initialSyncState);
   const [leadTab, setLeadTab] = useState<'TASKS' | 'COMPLETED'>('TASKS');
 
   useEffect(() => {
@@ -38,24 +47,34 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
 
     const headers = { 'Authorization': `Bearer ${session.access_token}` };
 
-    Promise.all([
-      fetch('http://localhost:3000/staff-performance/me', { headers }),
-      fetch('http://localhost:3000/trade-in-requests', { headers }), 
-      fetch('http://localhost:3000/staff-performance/leaderboard', { headers })
-    ]).then(async ([perfRes, leadsRes, leaderRes]) => {
-      if (perfRes.status === 401 || leadsRes.status === 401 || leaderRes.status === 401) {
-         logout();
-         return;
+    let loadedPerf = false;
+    let loadedLeads = false;
+
+    const completeSync = () => {
+      if (loadedPerf && loadedLeads) {
+        setIsSyncing(false);
       }
-      const perfData = perfRes.ok ? await perfRes.json() : null;
-      const leadsData = leadsRes.ok ? await leadsRes.json() : [];
-      const leaderData = leaderRes.ok ? await leaderRes.json() : [];
-      
-      if (perfData) setProfile((prev: any) => ({ ...prev, ...perfData }));
-      setLeads(Array.isArray(leadsData) ? leadsData : []);
-      setLeaderboard(Array.isArray(leaderData) ? leaderData : []);
-      setIsSyncing(false);
-    }).catch(() => setIsSyncing(false));
+    };
+
+    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-performance/me`, { headers }, (data) => {
+      setProfile((prev: any) => ({ ...prev, ...data }));
+      loadedPerf = true;
+      completeSync();
+    }).catch((err) => {
+      if (err.status === 401) logout();
+      loadedPerf = true;
+      completeSync();
+    });
+
+    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests`, { headers }, (data) => {
+      setLeads(Array.isArray(data) ? data : []);
+      loadedLeads = true;
+      completeSync();
+    }).catch((err) => {
+      if (err.status === 401) logout();
+      loadedLeads = true;
+      completeSync();
+    });
 
   }, [session]);
 
@@ -118,53 +137,11 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
     </div>
   );
 
-  const renderPerformance = () => (
-    <div className="space-y-8 pb-12">
-       <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-text-main tracking-tight">Regional Leaderboard</h1>
-          <p className="text-text-secondary text-[11px] font-bold uppercase tracking-wider flex items-center gap-2">Branch Performance Rankings</p>
-       </div>
 
-       <div className="grid grid-cols-1 gap-4">
-         {leaderboard.slice(0, 10).map((medalist: any, idx: number) => (
-            <div key={medalist.id} className={cn(
-              "native-card p-5 group flex items-center gap-5",
-              idx === 0 ? 'border-primary-main/30 bg-primary-subtle/10 shadow-lg' : ''
-            )}>
-               <div className={cn(
-                 "w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold shadow-sm",
-                 idx === 0 ? "bg-primary-main text-white" : "bg-bg-base border border-border-subtle text-text-muted"
-               )}>
-                  {idx === 0 ? <Award size={24} /> : (idx + 1)}
-               </div>
-               <div className="flex-grow">
-                  <h3 className="text-base font-bold text-text-main tracking-tight group-hover:text-primary-main transition-colors uppercase leading-none mb-2">
-                    {medalist.fullName}
-                  </h3>
-                  <div className="flex items-center gap-4">
-                     <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1.5 leading-none">
-                       <Star size={12} className="text-amber-500" /> {medalist.score} POINTS
-                     </p>
-                     <span className="w-1 h-1 bg-border-subtle rounded-full" />
-                     <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider leading-none">
-                       {idx === 0 ? 'Top Performer' : 'Regional Associate'}
-                     </p>
-                  </div>
-               </div>
-               <div className="text-right">
-                 <p className="text-xl font-bold text-text-main tracking-tighter">#{idx + 1}</p>
-                 <p className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Rank</p>
-               </div>
-            </div>
-         ))}
-       </div>
-    </div>
-  );
 
   return (
     <div className="pb-24">
       {activeTab === 'leads' && renderLeads()}
-      {activeTab === 'performance' && renderPerformance()}
       {activeTab === 'tasks' && <TasksManager />}
       {activeTab === 'budget' && <BudgetRequests />}
       {(activeTab === 'team' && (profile?.role === 'DISTRICT_MANAGER' || profile?.role === 'GENERAL_MANAGER')) && <TeamManager />}

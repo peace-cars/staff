@@ -26,13 +26,13 @@ export const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
       >
         <div className="flex items-start gap-5">
           {icon && (
-            <div className="w-14 h-14 bg-indigo-600 rounded-2xl text-white shadow-xl flex items-center justify-center shrink-0">
+            <div className="w-14 h-14 bg-primary-main rounded-2xl text-white shadow-xl flex items-center justify-center shrink-0">
               {icon}
             </div>
           )}
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-white tracking-tight leading-tight">{title}</h1>
-            {subtitle && <p className="text-sm text-slate-500 font-medium max-w-xl leading-relaxed">{subtitle}</p>}
+            <h1 className="text-3xl font-bold text-text-main tracking-tight leading-tight">{title}</h1>
+            {subtitle && <p className="text-sm text-text-secondary font-medium max-w-xl leading-relaxed">{subtitle}</p>}
           </div>
         </div>
         {actions && (

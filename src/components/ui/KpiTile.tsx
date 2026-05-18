@@ -17,30 +17,30 @@ interface KpiTileProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const KpiTile = React.forwardRef<HTMLDivElement, KpiTileProps>(
-  ({ className, label, value, delta, deltaType, icon, color = 'indigo', ...props }, ref) => {
+  ({ className, label, value, delta, deltaType, icon, color = 'primary', ...props }, ref) => {
     const colorClasses = {
-      indigo: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-      emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-      amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-      rose: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+      primary: 'bg-primary-main/10 text-primary-main border-primary-main/20',
+      emerald: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+      amber: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+      rose: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
     };
 
-    const deltaColor = deltaType === 'increase' ? 'text-emerald-400' : deltaType === 'decrease' ? 'text-rose-400' : 'text-slate-500';
+    const deltaColor = deltaType === 'increase' ? 'text-emerald-400' : deltaType === 'decrease' ? 'text-rose-400' : 'text-text-muted';
 
     return (
       <div
         ref={ref}
         className={cn(
-          'bg-surface-card/40 backdrop-blur-md border border-white/5 p-6 rounded-3xl shadow-xl hover:bg-white/[0.02] transition-all group overflow-hidden relative animate-in fade-in zoom-in-95 duration-500',
+          'bg-surface-card/40 backdrop-blur-md border border-border-subtle p-6 rounded-3xl shadow-xl hover:bg-surface-hover/20 transition-all group overflow-hidden relative animate-in fade-in zoom-in-95 duration-500',
           className
         )}
         {...props}
       >
         <div className="flex items-center justify-between relative z-10">
           <div className="space-y-1">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</p>
+            <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{label}</p>
             <div className="flex items-center gap-3">
-              <h4 className="text-2xl font-bold text-white tracking-tight">{value}</h4>
+              <h4 className="text-2xl font-bold text-text-main tracking-tight">{value}</h4>
               {delta !== undefined && (
                 <div className={cn('text-[10px] font-bold flex items-center gap-1 mt-1 font-mono', deltaColor)}>
                   {deltaType === 'increase' ? <TrendingUp size={10} /> : <TrendingDown size={10} />}

@@ -15,7 +15,7 @@ export default function NegotiationWidget() {
       if (!sessionStr) return;
       const { access_token } = JSON.parse(sessionStr);
       
-      const res = await fetch('http://localhost:3000/messages/recent', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/messages/recent`, {
         headers: { 'Authorization': `Bearer ${access_token}` }
       });
       const data = await res.json();
@@ -59,7 +59,7 @@ export default function NegotiationWidget() {
           <div 
             key={conv.id}
             onClick={() => navigate('/messages')}
-            className="native-card p-5 cursor-pointer hover:border-primary-main/30 transition-all flex items-center gap-4 group relative overflow-hidden"
+            className="native-card bg-surface-card p-5 cursor-pointer hover:border-primary-main/30 transition-all flex items-center gap-4 group relative overflow-hidden"
           >
             <div className="w-12 h-12 rounded-xl bg-bg-base border border-border-subtle flex items-center justify-center text-text-main font-bold text-xs shadow-sm group-hover:bg-primary-subtle group-hover:text-primary-main transition-colors">
                {conv.profiles?.full_name?.substring(0, 2).toUpperCase() || 'NA'}

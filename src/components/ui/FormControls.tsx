@@ -20,17 +20,17 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
   ({ label, error, icon, className, ...props }, ref) => {
     return (
       <div className={cn("space-y-1.5 w-full", className)}>
-        {label && <label className="text-xs font-semibold text-[#1d1d1f] ml-1 tracking-tight">{label}</label>}
+        {label && <label className="text-xs font-semibold text-text-main ml-1 tracking-tight">{label}</label>}
         <div className="relative group/field">
           {icon && (
-            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#86868b] transition-colors group-focus-within/field:text-[#0066cc]">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted transition-colors group-focus-within/field:text-primary-main">
               {icon}
             </div>
           )}
           <input
             ref={ref}
             className={cn(
-              "w-full bg-[#f5f5f7] border border-[#d2d2d7] rounded-xl py-3 px-5 text-[#1d1d1f] text-sm font-medium placeholder:text-[#86868b] focus:outline-none focus:border-[#0066cc] focus:ring-4 focus:ring-[#0066cc]/10 transition-all shadow-sm",
+              "w-full bg-surface-hover/50 border border-border-subtle rounded-xl py-3 px-5 text-text-main text-sm font-medium placeholder:text-text-muted focus:outline-none focus:border-primary-main focus:ring-4 focus:ring-primary-main/10 transition-all shadow-sm",
               icon && "pl-14",
               error && "border-red-500 focus:border-red-500 focus:ring-red-500/10",
             )}
@@ -49,11 +49,11 @@ export const TextAreaField = React.forwardRef<HTMLTextAreaElement, TextAreaField
   ({ label, error, className, ...props }, ref) => {
     return (
       <div className={cn("space-y-1.5 w-full", className)}>
-        {label && <label className="text-xs font-semibold text-[#1d1d1f] ml-1 tracking-tight">{label}</label>}
+        {label && <label className="text-xs font-semibold text-text-main ml-1 tracking-tight">{label}</label>}
         <textarea
           ref={ref}
           className={cn(
-            "w-full bg-[#f5f5f7] border border-[#d2d2d7] rounded-xl py-3 px-5 text-[#1d1d1f] text-sm font-medium placeholder:text-[#86868b] focus:outline-none focus:border-[#0066cc] focus:ring-4 focus:ring-[#0066cc]/10 transition-all shadow-sm min-h-[100px] resize-none",
+            "w-full bg-surface-hover/50 border border-border-subtle rounded-xl py-3 px-5 text-text-main text-sm font-medium placeholder:text-text-muted focus:outline-none focus:border-primary-main focus:ring-4 focus:ring-primary-main/10 transition-all shadow-sm min-h-[100px] resize-none",
             error && "border-red-500 focus:border-red-500 focus:ring-red-500/10",
           )}
           {...props}
@@ -72,21 +72,21 @@ export const SelectField = React.forwardRef<HTMLSelectElement, SelectFieldProps>
   ({ label, error, options, className, ...props }, ref) => {
     return (
       <div className={cn("space-y-1.5 w-full", className)}>
-        {label && <label className="text-xs font-semibold text-[#1d1d1f] ml-1 tracking-tight">{label}</label>}
+        {label && <label className="text-xs font-semibold text-text-main ml-1 tracking-tight">{label}</label>}
         <div className="relative group/field">
           <select
             ref={ref}
             className={cn(
-              "w-full bg-[#f5f5f7] border border-[#d2d2d7] rounded-xl py-3 px-5 text-[#1d1d1f] text-sm font-medium focus:outline-none focus:border-[#0066cc] focus:ring-4 focus:ring-[#0066cc]/10 transition-all shadow-sm appearance-none cursor-pointer",
+              "w-full bg-surface-hover/50 border border-border-subtle rounded-xl py-3 px-5 text-text-main text-sm font-medium focus:outline-none focus:border-primary-main focus:ring-4 focus:ring-primary-main/10 transition-all shadow-sm appearance-none cursor-pointer",
               error && "border-red-500 focus:border-red-500 focus:ring-red-500/10",
             )}
             {...props}
           >
             {options.map((opt) => (
-              <option key={opt.value} value={opt.value} className="bg-white">{opt.label}</option>
+              <option key={opt.value} value={opt.value} className="bg-surface-card text-text-main">{opt.label}</option>
             ))}
           </select>
-          <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-[#86868b] group-hover/field:text-[#1d1d1f] transition-colors">
+          <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted group-hover/field:text-text-main transition-colors">
              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
           </div>
         </div>

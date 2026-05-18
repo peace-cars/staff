@@ -1,6 +1,6 @@
 import { 
-  User, Phone, ChevronRight, DollarSign, 
-  Clock, MapPin, CheckCircle2, Hash, ArrowUpRight
+  User, Phone, DollarSign, Clock, MapPin, 
+  CheckCircle2, ArrowUpRight
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -13,80 +13,70 @@ export function ModernLeadCard({ lead, onClick }: ModernLeadCardProps) {
   const isIncoming = lead.status === 'NEW_LEAD' || lead.status === 'INSPECTION_PENDING';
   
   return (
-    <div className="native-card p-6 flex flex-col gap-6 group hover:border-border transition-all duration-300">
-      {/* Header: Status & Ref */}
-      <div className="flex items-center justify-between border-b border-border-subtle pb-4">
+    <div 
+      onClick={onClick}
+      className="native-card bg-surface-card border border-border-subtle p-3.5 flex flex-col gap-3 group hover:border-primary-main/30 transition-all duration-300 cursor-pointer active:scale-[0.99]"
+    >
+      {/* Upper Row: Status, ID & Action */}
+      <div className="flex items-center justify-between">
         <div className={cn(
-          "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2",
+          "px-2.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider flex items-center gap-1.5",
           isIncoming 
-            ? "bg-primary-subtle/20 text-primary-main border border-primary-subtle" 
+            ? "bg-primary-subtle text-primary-main border border-primary-main/20" 
             : "bg-surface-hover text-text-secondary border border-border-subtle"
         )}>
-          {isIncoming ? <Clock size={12} className="animate-pulse" /> : <CheckCircle2 size={12} />}
+          {isIncoming ? <Clock size={10} className="animate-pulse" /> : <CheckCircle2 size={10} />}
           {lead.status?.replace(/_/g, ' ')}
         </div>
-        <div className="flex items-center gap-1 text-[10px] font-bold text-text-dim uppercase tracking-wider">
-           <Hash size={12} />
-           <span>Ref • #{lead.id.substring(0, 8)}</span>
-        </div>
-      </div>
-
-      {/* Content: Vehicle & Client */}
-      <div className="grid md:grid-cols-[1fr,auto] gap-6">
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-xl font-bold text-text-main tracking-tight leading-none mb-2 group-hover:text-primary-main transition-colors">
-              {lead.vehicle}
-            </h3>
-            <div className="flex items-center gap-1.5 text-text-secondary">
-              <MapPin size={14} className="text-text-dim" />
-              <span className="text-[11px] font-semibold uppercase tracking-wider">{lead.location || 'Addis Ababa'}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 pt-2">
-            <div className="w-10 h-10 rounded-xl bg-surface-hover border border-border-subtle flex items-center justify-center text-text-dim">
-              <User size={18} />
-            </div>
-            <div>
-              <p className="text-[13px] font-bold text-text-main leading-none mb-1">{lead.customer}</p>
-              <div className="flex items-center gap-1.5 text-[11px] text-primary-main font-bold uppercase tracking-wider">
-                <Phone size={12} />
-                <span>{lead.phone}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col justify-between items-end gap-4">
+        <div className="flex items-center gap-1.5">
           {lead.financing && (
-            <div className="bg-warning/10 text-warning border border-warning/20 px-3 py-1.5 rounded-lg flex items-center gap-2">
-              <DollarSign size={14} />
-              <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Finance</span>
-            </div>
+            <span className="bg-warning/10 text-warning border border-warning/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider">
+              Finance
+            </span>
           )}
-          <div className="text-right">
-            <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest mb-0.5">Target Ask</p>
-            <p className="text-xl font-bold text-text-main tracking-tighter">
-              {Number(lead.askingPrice || 0).toLocaleString()} <span className="text-xs font-normal text-text-dim">ETB</span>
-            </p>
-          </div>
+          <span className="text-[8px] font-bold text-text-muted uppercase tracking-widest">
+            #{lead.id.substring(0, 6)}
+          </span>
         </div>
       </div>
 
-      {/* Action Footer */}
-      <div className="pt-4 border-t border-border-subtle flex items-center justify-between">
-        <div className="flex items-center gap-2">
-           <div className="w-2 h-2 rounded-full bg-primary-main" />
-           <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Priority: Medium</p>
+      {/* Main Info Row */}
+      <div className="flex justify-between items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-bold text-text-main tracking-tight truncate group-hover:text-primary-main transition-colors leading-tight">
+            {lead.vehicle}
+          </h3>
+          <div className="flex items-center gap-1.5 text-text-secondary mt-1">
+            <MapPin size={10} className="text-text-muted shrink-0" />
+            <span className="text-[9px] font-bold uppercase tracking-wider truncate">{lead.location || 'Addis Ababa'}</span>
+          </div>
         </div>
-        <button 
-          onClick={onClick}
-          className="bg-text-main text-bg-sidebar px-6 py-3 rounded-xl font-bold text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 hover:bg-text-main/90 active:scale-95 shadow-lg shadow-black/5"
-        >
-          {isIncoming ? 'Evaluate' : 'Details'}
-          <ArrowUpRight size={14} />
-        </button>
+        <div className="text-right shrink-0">
+          <p className="text-[8px] font-bold text-text-muted uppercase tracking-widest leading-none mb-0.5">Asking Price</p>
+          <p className="text-sm font-black text-text-main tracking-tight leading-none">
+            {Number(lead.askingPrice || lead.user_asking_price_etb || 0).toLocaleString()} <span className="text-[9px] font-medium text-text-muted">ETB</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Bottom Action / Metadata Row */}
+      <div className="pt-2 border-t border-border-subtle/50 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-1 text-[10px] font-bold text-text-secondary truncate">
+            <User size={10} className="text-text-muted shrink-0" />
+            <span className="truncate">{lead.customer}</span>
+          </div>
+          <span className="w-1 h-1 bg-border-subtle rounded-full shrink-0" />
+          <div className="flex items-center gap-1 text-[10px] text-primary-main font-bold shrink-0">
+            <Phone size={10} className="shrink-0" />
+            <span>{lead.phone}</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-primary-main group-hover:translate-x-0.5 transition-transform shrink-0">
+          <span>{isIncoming ? 'Evaluate' : 'Details'}</span>
+          <ArrowUpRight size={10} />
+        </div>
       </div>
     </div>
   );

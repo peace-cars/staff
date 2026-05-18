@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import ImageUpload from './ImageUpload';
 import { cn } from '../lib/utils';
+import { fetchWithCache } from '../lib/cache';
 
 export default function BudgetRequests() {
   const { session, logout } = useAuth();
@@ -18,15 +19,15 @@ export default function BudgetRequests() {
   const fetchBudgets = async () => {
     if (!session) return;
     try {
-      const res = await fetch('http://localhost:3000/staff-budgets', {
+      await fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-budgets`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
+      }, (data) => {
+        setBudgets(Array.isArray(data) ? data : []);
+        setLoading(false);
       });
-      if (res.status === 401) return logout();
-      const data = await res.json();
-      setBudgets(Array.isArray(data) ? data : []);
-    } catch (e) {
+    } catch (e: any) {
+      if (e.status === 401) logout();
       console.error(e);
-    } finally {
       setLoading(false);
     }
   };
@@ -40,7 +41,7 @@ export default function BudgetRequests() {
     if (!session || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await fetch('http://localhost:3000/staff-budgets', {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-budgets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,7 +67,7 @@ export default function BudgetRequests() {
   const handleUploadReceipt = async (id: string, url: string) => {
     if (!session) return;
     try {
-      await fetch(`http://localhost:3000/staff-budgets/${id}/receipt`, {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-budgets/${id}/receipt`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -82,10 +83,10 @@ export default function BudgetRequests() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'APPROVED': return { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', dot: 'bg-amber-500' };
-      case 'DISBURSED': return { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100', dot: 'bg-emerald-500' };
-      case 'REJECTED': return { bg: 'bg-red-50', text: 'text-red-500', border: 'border-red-100', dot: 'bg-red-500' };
-      default: return { bg: 'bg-slate-50', text: 'text-slate-500', border: 'border-slate-100', dot: 'bg-slate-400' };
+      case 'APPROVED': return { bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500/20', dot: 'bg-amber-500' };
+      case 'DISBURSED': return { bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500/20', dot: 'bg-emerald-500' };
+      case 'REJECTED': return { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/20', dot: 'bg-red-500' };
+      default: return { bg: 'bg-surface-hover', text: 'text-text-secondary', border: 'border-border-subtle', dot: 'bg-text-muted' };
     }
   };
 
@@ -113,7 +114,7 @@ export default function BudgetRequests() {
         </p>
       </div>
 
-      <div className="native-card p-6 space-y-6">
+      <div className="native-card p-6 space-y-6 bg-surface-card">
         <h4 className="text-sm font-bold text-text-main tracking-tight uppercase tracking-wider">New Funding Request</h4>
         <form onSubmit={requestBudget} className="space-y-5">
           <div className="space-y-1.5">
@@ -172,7 +173,7 @@ export default function BudgetRequests() {
           <History size={14} /> Request History
         </h2>
         <div className="flex items-center gap-3 text-[8px] font-bold text-text-muted uppercase tracking-wider">
-          <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Pending</span>
+          <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-text-muted" /> Pending</span>
           <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Approved</span>
           <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Disbursed</span>
         </div>
@@ -188,7 +189,7 @@ export default function BudgetRequests() {
           const colors = getStatusColor(b.status);
           return (
             <div key={b.id} className={cn(
-              "native-card p-5 transition-all relative overflow-hidden",
+              "native-card p-5 transition-all relative overflow-hidden bg-surface-card",
               b.status === 'DISBURSED' ? 'opacity-60 grayscale-[0.2]' : ''
             )}>
               <div className="flex items-center justify-between">
@@ -236,7 +237,7 @@ export default function BudgetRequests() {
         })}
       </div>
 
-      <div className="bg-white border border-border-subtle p-5 rounded-3xl flex items-start gap-4">
+      <div className="bg-surface-card border border-border-subtle p-5 rounded-3xl flex items-start gap-4">
         <div className="bg-bg-base p-2 rounded-xl text-text-muted shrink-0">
           <AlertCircle size={16} />
         </div>

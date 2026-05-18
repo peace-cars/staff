@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import { UserPlus, Shield, ArrowRight, Eye, EyeOff, Mail, Phone, User, Loader2 } from 'lucide-react';
+import { Shield, ArrowRight, Eye, EyeOff, Mail, Phone, User, Loader2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import logo from '../assets/logo.png';
 import authBg from '../assets/auth-bg.png';
 
-export default function Signup() {
+interface SignupProps {
+  onTransition?: () => void;
+}
+
+export default function Signup({ onTransition }: SignupProps) {
   const { signup } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -31,47 +35,51 @@ export default function Signup() {
   };
 
   const InputField = ({ label, icon: Icon, ...props }: any) => (
-    <div className="space-y-2">
-      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{label}</label>
+    <div className="space-y-1">
+      <label className="text-[9px] font-bold text-text-secondary uppercase tracking-widest ml-1">{label}</label>
       <div className="relative group">
-        {Icon && <Icon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" />}
+        {Icon && <Icon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary-main transition-colors" />}
         <input
           {...props}
-          className="w-full bg-slate-800 border border-slate-700 p-4 pl-12 rounded-xl text-sm text-white font-medium focus:outline-none focus:border-blue-500 transition-all placeholder:text-slate-600"
+          className="w-full bg-bg-base border border-border-subtle p-3 pl-11 rounded-xl text-[13px] text-text-main font-medium focus:outline-none focus:border-primary-main transition-all placeholder:text-text-muted"
         />
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-950 font-sans relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-between p-6 bg-bg-base font-sans relative overflow-hidden text-text-main transition-colors duration-300">
       {/* Enterprise Background */}
       <div className="absolute inset-0 z-0">
         <img 
           src={authBg} 
           alt="Operations Background" 
-          className="w-full h-full object-cover opacity-20 brightness-[0.5]"
+          className="w-full h-full object-cover opacity-15 brightness-[0.4] dark:brightness-[0.2]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-bg-base via-bg-base/95 to-transparent" />
       </div>
 
-      <div className="w-full max-w-md space-y-8 z-10">
-        {/* Branding */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl shadow-xl p-3 mb-2">
-            <UserPlus size={32} className="text-white" />
+      {/* Top Margin/Spacer for centering */}
+      <div className="h-4" />
+
+      <div className="w-full max-w-sm space-y-6 z-10">
+        {/* Branding with Core Speedometer Logo */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-primary-main/20 via-primary-main/5 to-transparent rounded-[1.6rem] p-3 shadow-xl border border-primary-main/15 backdrop-blur-md relative">
+            <img src={logo} alt="PeaceCars Logo" className="w-full h-full object-contain" />
+            <div className="absolute inset-0 bg-primary-main/5 rounded-[1.6rem] blur-xl -z-10 animate-pulse" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-white">Registry Hub</h1>
-            <p className="text-sm text-slate-500 font-medium uppercase tracking-widest">New Staff Provisioning</p>
+            <h1 className="text-xl font-black tracking-tight text-text-main uppercase leading-none">Register Associate</h1>
+            <p className="text-[9px] text-text-secondary font-bold uppercase tracking-[0.25em] mt-1">Staff Provisioning Hub</p>
           </div>
         </div>
 
-        {/* Auth Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 md:p-10 shadow-2xl">
-          <form onSubmit={handleSignup} className="space-y-5">
+        {/* Native Form Frame */}
+        <div className="bg-surface-card border border-border-subtle rounded-3xl p-5 shadow-2xl relative">
+          <form onSubmit={handleSignup} className="space-y-4">
             {errorMsg && (
-              <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl text-red-400 text-xs font-bold text-center mb-4">
+              <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-xl text-red-400 text-[10px] font-bold text-center uppercase tracking-wider animate-shake">
                 {errorMsg}
               </div>
             )}
@@ -80,7 +88,7 @@ export default function Signup() {
               label="Legal Name"
               type="text"
               icon={User}
-              placeholder="Ex: Dawit Abraham"
+              placeholder="Dawit Abraham"
               value={fullName}
               onChange={(e: any) => setFullName(e.target.value)}
               required
@@ -103,24 +111,24 @@ export default function Signup() {
               onChange={(e: any) => setPhone(e.target.value)}
               required
             />
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Password</label>
+            <div className="space-y-1">
+              <label className="text-[9px] font-bold text-text-secondary uppercase tracking-widest ml-1">Password</label>
               <div className="relative group">
-                <Shield size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                <Shield size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary-main transition-colors" />
                 <input
                   type={showPass ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 p-4 pl-12 rounded-xl text-sm text-white font-medium focus:outline-none focus:border-blue-500 transition-all placeholder:text-slate-600 pr-12"
+                  className="w-full bg-bg-base border border-border-subtle p-3 pl-11 rounded-xl text-[13px] text-text-main font-medium focus:outline-none focus:border-primary-main transition-all placeholder:text-text-muted pr-11"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-main transition-colors"
                 >
-                  {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
@@ -128,14 +136,14 @@ export default function Signup() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white h-14 rounded-xl font-bold text-sm uppercase tracking-widest transition-all shadow-lg active:scale-[0.98] mt-4 flex items-center justify-center gap-3"
+              className="w-full bg-primary-main hover:bg-primary-main/90 text-white h-12 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-primary-main/20 active:scale-[0.98] mt-3 flex items-center justify-center gap-2"
             >
               {loading ? (
-                <Loader2 size={20} className="animate-spin" />
+                <Loader2 size={16} className="animate-spin" />
               ) : (
                 <>
                   <span>Create Account</span>
-                  <ArrowRight size={18} />
+                  <ArrowRight size={14} />
                 </>
               )}
             </button>
@@ -143,11 +151,23 @@ export default function Signup() {
         </div>
 
         <div className="text-center">
-          <Link to="/login" className="text-xs font-bold text-slate-500 hover:text-blue-500 transition-all uppercase tracking-wider">
+          <button
+            type="button"
+            onClick={() => {
+              if (onTransition) onTransition();
+              else navigate('/login');
+            }}
+            className="text-[10px] font-bold text-text-secondary hover:text-primary-main transition-all uppercase tracking-wider underline decoration-dotted"
+          >
             Already registered? Sign In
-          </Link>
+          </button>
         </div>
       </div>
+
+      {/* Corporate Footnote */}
+      <p className="text-center text-[8px] text-text-muted font-bold uppercase tracking-[0.2em] z-10">
+        © 2026 Peace Cars Inc. • Registry Hub v2.0
+      </p>
     </div>
   );
 }

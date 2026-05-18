@@ -50,7 +50,7 @@ export function BottomSheet({ isOpen, onClose, title, children, height = 'auto' 
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className={cn(
-              "fixed bottom-0 left-0 right-0 z-[110] bg-white rounded-t-3xl shadow-2xl flex flex-col",
+              "fixed bottom-0 left-0 right-0 z-[110] bg-surface-card text-text-main border-t border-border-subtle rounded-t-3xl shadow-2xl flex flex-col",
               heightClass
             )}
             drag="y"
@@ -64,15 +64,15 @@ export function BottomSheet({ isOpen, onClose, title, children, height = 'auto' 
           >
             {/* Handle Bar */}
             <div className="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
-              <div className="w-12 h-1.5 bg-gray-200 rounded-full" />
+              <div className="w-12 h-1.5 bg-border-subtle rounded-full" />
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 pb-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-6 pb-4 border-b border-border-subtle">
               <h3 className="text-lg font-black tracking-tight">{title}</h3>
               <button
                 onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-hover text-text-muted hover:bg-surface-hover/80 transition-colors"
               >
                 <X size={16} />
               </button>

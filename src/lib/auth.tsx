@@ -7,7 +7,7 @@ const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   const isNative = Capacitor.isNativePlatform();
   const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  return (isLocalhost && !isNative) ? 'http://localhost:3000' : 'https://backend-eabm.onrender.com';
+  return (isLocalhost && !isNative) ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}` : 'https://backend-eabm.onrender.com';
 };
 
 const API_URL = getApiUrl();
@@ -52,14 +52,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const logout = React.useCallback(() => {
-    sessionStorage.removeItem('staff_session');
-    sessionStorage.removeItem('staffId');
+    localStorage.removeItem('staff_session');
+    localStorage.removeItem('staffId');
     setSession(null);
     window.location.href = '/login';
   }, []);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('staff_session');
+    const stored = localStorage.getItem('staff_session');
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -68,8 +68,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const nowSec = Math.floor(Date.now() / 1000);
         if (parsed.expires_at && parsed.expires_at < nowSec) {
           console.warn('[Staff Auth] Session expired, clearing stale token.');
-          sessionStorage.removeItem('staff_session');
-          sessionStorage.removeItem('staffId');
+          localStorage.removeItem('staff_session');
+          localStorage.removeItem('staffId');
           setSession(null);
         } else {
           setSession(parsed);
@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         }
       } catch {
-        sessionStorage.removeItem('staff_session');
+        localStorage.removeItem('staff_session');
       }
     }
     setLoading(false);
@@ -128,8 +128,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile: data.profile,
       };
 
-      sessionStorage.setItem('staff_session', JSON.stringify(sessionData));
-      sessionStorage.setItem('staffId', data.user.id);
+      localStorage.setItem('staff_session', JSON.stringify(sessionData));
+      localStorage.setItem('staffId', data.user.id);
       setSession(sessionData);
 
       // Handshake: Notify Supabase client
@@ -172,8 +172,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile: data.profile,
       };
 
-      sessionStorage.setItem('staff_session', JSON.stringify(sessionData));
-      sessionStorage.setItem('staffId', data.user.id);
+      localStorage.setItem('staff_session', JSON.stringify(sessionData));
+      localStorage.setItem('staffId', data.user.id);
       setSession(sessionData);
 
       // Handshake: Notify Supabase client

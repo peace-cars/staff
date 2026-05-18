@@ -81,6 +81,9 @@ export default function InspectionForm() {
   const [evData, setEvData] = useState({ batterySoh: '', range: '', chargerIncluded: true });
   const [finalNotes, setFinalNotes] = useState('');
   const [uploadingPointId, setUploadingPointId] = useState<string | null>(null);
+  const [selectedGalleryPhoto, setSelectedGalleryPhoto] = useState<string | null>(null);
+  const [isAppPhotoModalOpen, setIsAppPhotoModalOpen] = useState(false);
+  const [targetAssignPoint, setTargetAssignPoint] = useState<{ category: string; pointId: string } | null>(null);
 
   // Auto-calculate scores from pass/fail ratios
   const calcScore = (cat: string): number => {
@@ -115,13 +118,13 @@ export default function InspectionForm() {
     const headers = { 'Authorization': `Bearer ${session.access_token}` };
 
     // Fetch Staff Profile
-    fetch('http://localhost:3000/staff-performance/me', { headers })
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-performance/me`, { headers })
       .then(r => r.json())
       .then(setProfile)
       .catch(console.error);
 
     // Fetch Lead Details
-    fetch(`http://localhost:3000/trade-in-requests/${leadId}`, { headers })
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests/${leadId}`, { headers })
       .then(r => {
         if (!r.ok) throw new Error(`Access denied (${r.status})`);
         return r.json();
@@ -135,7 +138,7 @@ export default function InspectionForm() {
       });
 
     // Fetch Commission Rate
-    fetch('http://localhost:3000/settings', { headers })
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/settings`, { headers })
       .then(r => r.json())
       .then(settings => {
         if (settings.evaluation_commission_percent) {
@@ -160,7 +163,7 @@ export default function InspectionForm() {
       fd.append('file', file);
       fd.append('bucket', 'vehicles');
       fd.append('folder', `inspections/${leadId}`);
-      const res = await fetch('http://localhost:3000/storage/upload', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/storage/upload`, {
         method: 'POST', headers: { 'Authorization': `Bearer ${session.access_token}` }, body: fd
       });
       if (!res.ok) throw new Error('Upload failed');
@@ -174,7 +177,7 @@ export default function InspectionForm() {
     if (!session) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch('http://localhost:3000/trade-in-requests/inspection', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests/inspection`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -216,19 +219,19 @@ export default function InspectionForm() {
   };
 
   if (!profile && !fetchError) return (
-    <div className="min-h-screen bg-white flex items-center justify-center gap-3">
-      <div className="w-5 h-5 border-2 border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
-      <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Synchronizing...</span>
+    <div className="min-h-screen bg-bg-base flex items-center justify-center gap-3">
+      <div className="w-5 h-5 border-2 border-primary-main/10 border-t-primary-main rounded-full animate-spin" />
+      <span className="text-text-muted font-bold uppercase tracking-widest text-[9px]">Synchronizing...</span>
     </div>
   );
 
   if (fetchError) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-bg-base flex flex-col items-center justify-center p-6 text-center">
         <ShieldAlert size={48} className="text-red-500 mb-4" />
-        <h1 className="text-xl font-bold text-slate-900 mb-2">Access Restricted</h1>
-        <p className="text-slate-400 text-sm mb-6">{fetchError}</p>
-        <button onClick={() => navigate('/')} className="bg-slate-50 text-slate-600 px-6 py-3 rounded-xl font-bold text-sm border border-slate-100">Back</button>
+        <h1 className="text-xl font-bold text-text-main mb-2">Access Restricted</h1>
+        <p className="text-text-secondary text-sm mb-6">{fetchError}</p>
+        <button onClick={() => navigate('/')} className="bg-surface-hover text-text-secondary px-6 py-3 rounded-xl font-bold text-sm border border-border-subtle hover:bg-surface-hover/80 transition-all">Back</button>
       </div>
     );
   }
@@ -236,11 +239,11 @@ export default function InspectionForm() {
   const isAssigned = lead?.assigned_staff_id === session?.user?.id;
   if (!lead || (!profile?.is_inspector_verified && !isDM && !isAssigned)) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-bg-base flex flex-col items-center justify-center p-6 text-center">
         <ShieldAlert size={48} className="text-red-500 mb-4" />
-        <h1 className="text-xl font-bold text-slate-900 mb-2">Registry Lock</h1>
-        <p className="text-slate-400 text-sm mb-6">Unauthorized access detected. You are not assigned to this vehicle evaluation.</p>
-        <button onClick={() => navigate('/')} className="bg-slate-50 text-slate-600 px-6 py-3 rounded-xl font-bold text-sm border border-slate-100">Back</button>
+        <h1 className="text-xl font-bold text-text-main mb-2">Registry Lock</h1>
+        <p className="text-text-secondary text-sm mb-6">Unauthorized access detected. You are not assigned to this vehicle evaluation.</p>
+        <button onClick={() => navigate('/')} className="bg-surface-hover text-text-secondary px-6 py-3 rounded-xl font-bold text-sm border border-border-subtle hover:bg-surface-hover/80 transition-all">Back</button>
       </div>
     );
   }
@@ -249,15 +252,15 @@ export default function InspectionForm() {
   const isHighRisk = avg < 40 || scores.mechanical < 50;
 
   const renderPoint = (category: string, point: InspectionPoint) => (
-    <div key={point.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
+    <div key={point.id} className="p-4 rounded-2xl bg-surface-hover/50 border border-border-subtle space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-bold text-slate-900 uppercase tracking-wider">{point.label}</p>
-        <div className="flex bg-white rounded-lg p-1 border border-slate-100 shadow-sm">
+        <p className="text-[10px] font-bold text-text-main uppercase tracking-wider">{point.label}</p>
+        <div className="flex bg-bg-base rounded-lg p-1 border border-border-subtle shadow-sm">
           <button 
             onClick={() => updatePoint(category, point.id, { status: 'pass' })}
             className={cn(
               "w-8 h-8 rounded-md flex items-center justify-center transition-all",
-              point.status === 'pass' ? "bg-emerald-500 text-white" : "text-slate-300 hover:bg-slate-50"
+              point.status === 'pass' ? "bg-emerald-500 text-white" : "text-text-muted hover:bg-surface-hover"
             )}
           >
             <CheckCircle2 size={16} />
@@ -266,7 +269,7 @@ export default function InspectionForm() {
             onClick={() => updatePoint(category, point.id, { status: 'fail' })}
             className={cn(
               "w-8 h-8 rounded-md flex items-center justify-center transition-all",
-              point.status === 'fail' ? "bg-red-500 text-white" : "text-slate-300 hover:bg-slate-50"
+              point.status === 'fail' ? "bg-red-500 text-white" : "text-text-muted hover:bg-surface-hover"
             )}
           >
             <XCircle size={16} />
@@ -278,24 +281,34 @@ export default function InspectionForm() {
           placeholder="Observation notes..."
           value={point.notes}
           onChange={(e) => updatePoint(category, point.id, { notes: e.target.value })}
-          className="flex-1 bg-white/80 border border-slate-100 rounded-lg p-2 text-[10px] font-medium focus:outline-none focus:border-indigo-300"
+          className="flex-1 bg-surface-card border border-border-subtle rounded-lg p-2 text-[10px] font-medium text-text-main placeholder:text-text-muted focus:outline-none focus:border-primary-main"
         />
-        <div className="w-14 h-10 shrink-0">
+        <div className="w-20 h-10 shrink-0">
           {point.photo ? (
-            <div className="relative w-full h-full rounded-lg overflow-hidden border border-slate-200 group">
+            <div className="relative w-full h-full rounded-lg overflow-hidden border border-border-subtle group">
               <img src={point.photo} className="w-full h-full object-cover" />
               <button onClick={() => updatePoint(category, point.id, { photo: undefined })} className="absolute inset-0 bg-red-500/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center"><Trash2 size={12} /></button>
             </div>
           ) : (
             <div className="flex gap-0.5 h-full">
-              <label className="flex-1 h-full rounded-l-lg border border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300 hover:text-indigo-500 cursor-pointer bg-white">
+              <label className="flex-1 h-full rounded-l-lg border border-dashed border-border-subtle flex flex-col items-center justify-center text-text-muted hover:text-primary-main cursor-pointer bg-surface-card transition-colors" title="Camera">
                 {uploadingPointId === point.id ? <Loader2 size={10} className="animate-spin" /> : <Camera size={10} />}
                 <input type="file" className="hidden" accept="image/*" capture="environment" onChange={e => { const f=e.target.files?.[0]; if(f) handlePhotoUpload(category, point.id, f); }} disabled={!!uploadingPointId} />
               </label>
-              <label className="flex-1 h-full rounded-r-lg border border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300 hover:text-indigo-500 cursor-pointer bg-white">
+              <label className="flex-1 h-full border border-dashed border-border-subtle flex flex-col items-center justify-center text-text-muted hover:text-primary-main cursor-pointer bg-surface-card transition-colors" title="Upload File">
                 {uploadingPointId === point.id ? <Loader2 size={10} className="animate-spin" /> : <ImageIcon size={10} />}
                 <input type="file" className="hidden" accept="image/*" onChange={e => { const f=e.target.files?.[0]; if(f) handlePhotoUpload(category, point.id, f); }} disabled={!!uploadingPointId} />
               </label>
+              <button 
+                onClick={() => {
+                  setTargetAssignPoint({ category, pointId: point.id });
+                  setIsAppPhotoModalOpen(true);
+                }}
+                className="flex-1 h-full rounded-r-lg border border-dashed border-border-subtle flex flex-col items-center justify-center text-text-muted hover:text-primary-main bg-surface-card transition-colors"
+                title="Select from Appraisal Images"
+              >
+                <ArrowRight size={10} className="rotate-45" />
+              </button>
             </div>
           )}
         </div>
@@ -304,17 +317,17 @@ export default function InspectionForm() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50/50 flex flex-col pb-24 relative font-sans">
+    <div className="min-h-screen bg-bg-base flex flex-col pb-24 relative font-sans text-text-main transition-colors duration-300">
       {/* Dynamic Mobile Header */}
-      <header className="sticky top-0 bg-white/90 backdrop-blur-xl border-b border-slate-100 z-50 px-5 py-4 flex items-center gap-3 shadow-sm">
-        <button onClick={() => navigate('/')} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 transition-all">
+      <header className="sticky top-0 bg-surface-card/90 backdrop-blur-xl border-b border-border-subtle z-50 px-5 py-4 flex items-center gap-3 shadow-md">
+        <button onClick={() => navigate('/')} className="p-2 rounded-xl bg-surface-hover text-text-secondary hover:bg-surface-hover/80 transition-all">
           <ChevronLeft size={18} />
         </button>
         <div className="flex-1">
-          <h1 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.1em]">{lead.vehicle}</h1>
+          <h1 className="text-[11px] font-black text-text-main uppercase tracking-[0.1em]">{lead.vehicle}</h1>
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <p className="text-slate-400 text-[8px] font-bold uppercase tracking-widest">Live Appraisal • {lead.location}</p>
+            <p className="text-text-secondary text-[8px] font-bold uppercase tracking-widest">Live Appraisal • {lead.location}</p>
           </div>
         </div>
       </header>
@@ -323,47 +336,59 @@ export default function InspectionForm() {
       <main className="flex-1 p-5 w-full max-w-lg mx-auto space-y-4">
         
         {/* Intel Card */}
-        <div className="bg-white p-0 overflow-hidden rounded-3xl shadow-lg border border-slate-100">
-           <div className="h-40 bg-slate-100 relative">
-              {lead.photos?.[0] ? (
-                <img src={lead.photos[0]} className="w-full h-full object-cover" />
+        <div className="bg-surface-card p-0 overflow-hidden rounded-3xl shadow-lg border border-border-subtle">
+           <div className="h-48 bg-surface-hover relative flex overflow-x-auto snap-x snap-mandatory no-scrollbar border-b border-border-subtle">
+              {lead.photos && lead.photos.length > 0 ? (
+                lead.photos.map((photo: string, index: number) => (
+                  <div key={index} className="w-full h-full shrink-0 snap-center relative">
+                    <img 
+                      src={photo} 
+                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
+                      onClick={() => setSelectedGalleryPhoto(photo)}
+                      alt="Trade-In Vehicle Image"
+                    />
+                    <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md text-white text-[8px] font-bold px-2 py-0.5 rounded-md border border-white/10 uppercase tracking-widest">
+                      Photo {index + 1} of {lead.photos.length}
+                    </div>
+                  </div>
+                ))
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-300">
+                <div className="w-full h-full flex items-center justify-center text-text-muted">
                   <ImageIcon size={48} />
                 </div>
               )}
-              <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white text-[8px] font-bold px-2 py-1 rounded-full border border-white/10 uppercase tracking-widest">
+              <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white text-[8px] font-bold px-2 py-1 rounded-full border border-white/10 uppercase tracking-widest z-10">
                 #{leadId?.substring(0,6)}
               </div>
            </div>
            <div className="p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+              <div className="flex items-center justify-between border-b border-border-subtle pb-3">
                  <div>
-                    <p className="text-slate-400 text-[8px] font-bold uppercase tracking-widest mb-0.5">Asset Registry</p>
-                    <h2 className="text-lg font-black text-slate-900 tracking-tight">{lead.vehicle}</h2>
+                    <p className="text-text-secondary text-[8px] font-bold uppercase tracking-widest mb-0.5">Asset Registry</p>
+                    <h2 className="text-lg font-black text-text-main tracking-tight">{lead.vehicle}</h2>
                  </div>
                  <div className="text-right">
-                    <p className="text-slate-400 text-[8px] font-bold uppercase tracking-widest mb-0.5">Asking Price</p>
-                    <p className="text-base font-black text-indigo-600 tracking-tight">{lead.user_asking_price_etb?.toLocaleString()} <span className="text-[8px]">ETB</span></p>
+                    <p className="text-text-secondary text-[8px] font-bold uppercase tracking-widest mb-0.5">Asking Price</p>
+                    <p className="text-base font-black text-primary-main tracking-tight">{lead.user_asking_price_etb?.toLocaleString()} <span className="text-[8px]">ETB</span></p>
                  </div>
               </div>
               <div className="grid grid-cols-2 gap-3 pt-1">
                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                    <div className="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center text-text-muted">
                        <User size={14} />
                     </div>
                     <div>
-                       <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Customer</p>
-                       <p className="text-[10px] font-bold text-slate-900">{lead.customer}</p>
+                       <p className="text-[8px] font-bold text-text-secondary uppercase tracking-widest">Customer</p>
+                       <p className="text-[10px] font-bold text-text-main">{lead.customer}</p>
                     </div>
                  </div>
                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                    <div className="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center text-text-muted">
                        <Phone size={14} />
                     </div>
                     <div>
-                       <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Contact</p>
-                       <p className="text-[10px] font-bold text-slate-900">{lead.phone}</p>
+                       <p className="text-[8px] font-bold text-text-secondary uppercase tracking-widest">Contact</p>
+                       <p className="text-[10px] font-bold text-text-main">{lead.phone}</p>
                     </div>
                  </div>
               </div>
@@ -371,7 +396,7 @@ export default function InspectionForm() {
         </div>
 
         {/* Estimated Commission */}
-        <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-3xl p-6 text-center text-white shadow-xl shadow-indigo-500/30 relative overflow-hidden">
+        <div className="bg-gradient-to-r from-primary-main to-primary-main/80 rounded-3xl p-6 text-center text-white shadow-xl relative overflow-hidden">
            <div className="absolute top-0 right-0 p-4 opacity-10">
               <DollarSign size={64} />
            </div>
@@ -382,7 +407,7 @@ export default function InspectionForm() {
            </h3>
         </div>
 
-        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] pt-4 pl-2">Inspection Categories</h3>
+        <h3 className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] pt-4 pl-2">Inspection Categories</h3>
 
         {/* Category Cards */}
         {[
@@ -395,27 +420,27 @@ export default function InspectionForm() {
             key={cat.id}
             whileTap={{ scale: 0.98 }}
             onClick={() => setActiveSheet(cat.id as any)}
-            className="w-full bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between text-left group"
+            className="w-full bg-surface-card p-4 rounded-3xl border border-border-subtle shadow-sm flex items-center justify-between text-left group"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+              <div className="w-12 h-12 rounded-2xl bg-surface-hover text-text-muted flex items-center justify-center group-hover:bg-primary-subtle group-hover:text-primary-main transition-colors">
                 {cat.icon}
               </div>
               <div>
-                <h4 className="text-sm font-bold text-slate-900 tracking-tight">{cat.label}</h4>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{cat.total} Points to verify</p>
+                <h4 className="text-sm font-bold text-text-main tracking-tight">{cat.label}</h4>
+                <p className="text-[9px] text-text-secondary font-bold uppercase tracking-widest">{cat.total} Points to verify</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               {cat.score !== null && (
                 <div className={cn(
                   "px-3 py-1 rounded-full text-xs font-bold",
-                  cat.score > 70 ? "bg-emerald-50 text-emerald-600" : cat.score > 40 ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"
+                  cat.score > 70 ? "bg-emerald-500/10 text-emerald-500" : cat.score > 40 ? "bg-amber-500/10 text-amber-500" : "bg-red-500/10 text-red-500"
                 )}>
                   {cat.score}%
                 </div>
               )}
-              <ChevronRight size={18} className="text-slate-300" />
+              <ChevronRight size={18} className="text-text-muted" />
             </div>
           </motion.button>
         ))}
@@ -423,7 +448,7 @@ export default function InspectionForm() {
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={() => setActiveSheet('summary')}
-          className="w-full bg-slate-900 p-4 rounded-3xl shadow-lg flex items-center justify-between text-left mt-6"
+          className="w-full bg-primary-main hover:bg-primary-main/90 p-4 rounded-3xl shadow-lg flex items-center justify-between text-left mt-6"
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-white/10 text-white flex items-center justify-center">
@@ -431,7 +456,7 @@ export default function InspectionForm() {
             </div>
             <div>
               <h4 className="text-sm font-bold text-white tracking-tight">Finalize Report</h4>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Submit for Review</p>
+              <p className="text-[9px] text-white/70 font-bold uppercase tracking-widest">Submit for Review</p>
             </div>
           </div>
           <ArrowRight size={18} className="text-white" />
@@ -450,13 +475,13 @@ export default function InspectionForm() {
         {activeSheet && activeSheet !== 'summary' && activeSheet !== 'ev' && (
           <div className="space-y-4 pb-20">
             {/* Auto Score Indicator */}
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl mb-6">
-              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm bg-white shadow-sm",
-                (scores as any)[activeSheet] > 70 ? "text-emerald-600" : (scores as any)[activeSheet] > 40 ? "text-amber-600" : "text-red-600"
+            <div className="flex items-center gap-3 p-3 bg-surface-hover border border-border-subtle rounded-2xl mb-6">
+              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm bg-surface-card border border-border-subtle shadow-sm",
+                (scores as any)[activeSheet] > 70 ? "text-emerald-500" : (scores as any)[activeSheet] > 40 ? "text-amber-500" : "text-red-500"
               )}>{(scores as any)[activeSheet]}%</div>
               <div>
-                <p className="text-[10px] font-bold text-slate-900">Computed Score</p>
-                <p className="text-[9px] text-slate-400">
+                <p className="text-[10px] font-bold text-text-main">Computed Score</p>
+                <p className="text-[9px] text-text-secondary">
                   {checklist[activeSheet].filter(p=>p.status==='pass').length} pass / {checklist[activeSheet].filter(p=>p.status==='fail').length} fail
                 </p>
               </div>
@@ -467,11 +492,11 @@ export default function InspectionForm() {
             </div>
             
             <div className="pt-8 space-y-4">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Manual Grade Override</p>
-              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+              <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest px-2">Manual Grade Override</p>
+              <div className="bg-surface-hover p-6 rounded-3xl border border-border-subtle">
                   <div className="flex justify-between items-center mb-4">
-                    <span className="text-xs font-bold text-slate-900">{activeSheet.toUpperCase()} GRADE</span>
-                    <span className="text-lg font-black text-indigo-600">{(scores as any)[activeSheet]}%</span>
+                    <span className="text-xs font-bold text-text-main">{activeSheet.toUpperCase()} GRADE</span>
+                    <span className="text-lg font-black text-primary-main">{(scores as any)[activeSheet]}%</span>
                   </div>
                   <input 
                     type="range" min="0" max="100" 
@@ -480,14 +505,14 @@ export default function InspectionForm() {
                       setScoreOverrides(prev => ({ ...prev, [activeSheet]: true }));
                       setScores(prev => ({...prev, [activeSheet]: parseInt(e.target.value)}));
                     }}
-                    className="w-full accent-slate-900 h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer"
+                    className="w-full accent-primary-main h-1.5 bg-border-subtle rounded-full appearance-none cursor-pointer"
                   />
               </div>
             </div>
 
             <button 
               onClick={() => setActiveSheet(null)}
-              className="w-full mt-6 py-4 rounded-2xl bg-slate-900 text-white font-bold text-sm active:scale-95 transition-transform"
+              className="w-full mt-6 py-4 rounded-2xl bg-primary-main text-white font-bold text-sm hover:bg-primary-main/90 active:scale-95 transition-transform"
             >
               Done
             </button>
@@ -503,36 +528,36 @@ export default function InspectionForm() {
         height="full"
       >
         <div className="space-y-6 pb-20">
-          <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 space-y-6">
-              <div className="flex items-center gap-4 border-b border-indigo-100/50 pb-4">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200">
+          <div className="bg-primary-subtle p-6 rounded-3xl border border-primary-main/20 space-y-6">
+              <div className="flex items-center gap-4 border-b border-primary-main/10 pb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary-main text-white flex items-center justify-center shadow-lg">
                   <Zap size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-indigo-900 tracking-tight">Battery Telemetry</h3>
-                  <p className="text-[9px] text-indigo-500 font-bold uppercase tracking-widest">State of Health Verification</p>
+                  <h3 className="text-sm font-black text-text-main tracking-tight">Battery Telemetry</h3>
+                  <p className="text-[9px] text-primary-main font-bold uppercase tracking-widest">State of Health Verification</p>
                 </div>
               </div>
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-indigo-900 uppercase tracking-widest ml-1">Battery State of Health (%)</label>
+                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest ml-1">Battery State of Health (%)</label>
                   <input 
                     type="number" 
                     value={evData.batterySoh}
                     onChange={e => setEvData({...evData, batterySoh: e.target.value})}
                     placeholder="e.g. 98.5"
-                    className="w-full bg-white border border-indigo-100 rounded-2xl py-4 px-5 text-slate-900 font-bold text-lg focus:outline-none focus:border-indigo-400 transition-all shadow-sm"
+                    className="w-full bg-surface-card border border-border-subtle rounded-2xl py-4 px-5 text-text-main font-bold text-lg focus:outline-none focus:border-primary-main transition-all shadow-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-indigo-900 uppercase tracking-widest ml-1">Verified Range (KM)</label>
+                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest ml-1">Verified Range (KM)</label>
                   <input 
                     type="number" 
                     value={evData.range}
                     onChange={e => setEvData({...evData, range: e.target.value})}
                     placeholder="e.g. 420"
-                    className="w-full bg-white border border-indigo-100 rounded-2xl py-4 px-5 text-slate-900 font-bold text-lg focus:outline-none focus:border-indigo-400 transition-all shadow-sm"
+                    className="w-full bg-surface-card border border-border-subtle rounded-2xl py-4 px-5 text-text-main font-bold text-lg focus:outline-none focus:border-primary-main transition-all shadow-sm"
                   />
                 </div>
               </div>
@@ -544,7 +569,7 @@ export default function InspectionForm() {
 
           <button 
             onClick={() => setActiveSheet(null)}
-            className="w-full mt-6 py-4 rounded-2xl bg-slate-900 text-white font-bold text-sm active:scale-95 transition-transform"
+            className="w-full mt-6 py-4 rounded-2xl bg-primary-main text-white font-bold text-sm hover:bg-primary-main/90 active:scale-95 transition-transform"
           >
             Save EV Data
           </button>
@@ -562,31 +587,31 @@ export default function InspectionForm() {
             <div className="flex flex-col items-center text-center space-y-3">
               <div className={cn(
                 "w-24 h-24 rounded-full flex items-center justify-center border-4 shadow-xl",
-                avg > 70 ? "bg-emerald-50 border-emerald-100 text-emerald-600" : avg > 40 ? "bg-amber-50 border-amber-100 text-amber-600" : "bg-red-50 border-red-100 text-red-600"
+                avg > 70 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : avg > 40 ? "bg-amber-500/10 border-amber-500/20 text-amber-500" : "bg-red-500/10 border-red-500/20 text-red-500"
               )}>
                 <p className="text-3xl font-black">{Math.round(avg)}%</p>
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight">Total Health Score</h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Calculated from all categories</p>
+                <h3 className="text-lg font-black text-text-main tracking-tight">Total Health Score</h3>
+                <p className="text-[10px] text-text-secondary font-bold uppercase tracking-widest">Calculated from all categories</p>
               </div>
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Inspector's Final Summary</label>
+              <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest ml-1">Inspector's Final Summary</label>
               <textarea 
                 value={finalNotes}
                 onChange={e => setFinalNotes(e.target.value)}
                 placeholder="Detailed summary of vehicle condition, required immediate maintenance, and pricing recommendations..."
-                className="w-full bg-slate-50 border border-slate-100 rounded-3xl p-5 text-sm min-h-[120px] focus:outline-none focus:border-indigo-300 transition-all resize-none"
+                className="w-full bg-surface-hover border border-border-subtle rounded-3xl p-5 text-sm min-h-[120px] focus:outline-none focus:border-primary-main text-text-main transition-all resize-none placeholder:text-text-muted"
               />
             </div>
 
-            <div className="pt-4 border-t border-slate-100 space-y-4">
+            <div className="pt-4 border-t border-border-subtle space-y-4">
                 <button
                   onClick={() => handleSubmit('review_pending')}
                   disabled={isSubmitting}
-                  className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30"
+                  className="w-full py-4 rounded-2xl bg-primary-main text-white font-bold text-sm hover:bg-primary-main/90 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg"
                 >
                   {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <ShieldAlert size={16} />}
                   Submit for DM Review
@@ -607,20 +632,112 @@ export default function InspectionForm() {
       </BottomSheet>
 
       {/* Persistent Navigation Context */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 p-4 z-40 md:hidden flex justify-center gap-10">
+      <div className="fixed bottom-0 left-0 right-0 bg-surface-card/90 backdrop-blur-xl border-t border-border-subtle p-4 z-40 md:hidden flex justify-center gap-10">
          <div className="flex flex-col items-center">
-            <Activity size={18} className={activeSheet === 'mechanical' ? 'text-indigo-600' : 'text-slate-300'} />
-            <span className="text-[8px] font-black uppercase mt-1 text-slate-400">Score</span>
+            <Activity size={18} className={activeSheet === 'mechanical' ? 'text-primary-main' : 'text-text-muted'} />
+            <span className="text-[8px] font-black uppercase mt-1 text-text-secondary">Score</span>
          </div>
          <div className="flex flex-col items-center">
-            <ShieldCheck size={18} className={activeSheet === 'exterior' ? 'text-indigo-600' : 'text-slate-300'} />
-            <span className="text-[8px] font-black uppercase mt-1 text-slate-400">Armor</span>
+            <ShieldCheck size={18} className={activeSheet === 'exterior' ? 'text-primary-main' : 'text-text-muted'} />
+            <span className="text-[8px] font-black uppercase mt-1 text-text-secondary">Armor</span>
          </div>
          <div className="flex flex-col items-center">
-            <Zap size={18} className={activeSheet === 'ev' ? 'text-indigo-600' : 'text-slate-300'} />
-            <span className="text-[8px] font-black uppercase mt-1 text-slate-400">Power</span>
+            <Zap size={18} className={activeSheet === 'ev' ? 'text-primary-main' : 'text-text-muted'} />
+            <span className="text-[8px] font-black uppercase mt-1 text-text-secondary">Power</span>
          </div>
       </div>
+
+      {/* Dynamic Image Zoom/Detail Modal */}
+      {selectedGalleryPhoto && (
+        <div 
+          className="fixed inset-0 bg-black/95 backdrop-blur-md z-[200] flex flex-col items-center justify-center p-4 animate-in fade-in duration-300"
+          onClick={() => setSelectedGalleryPhoto(null)}
+        >
+          <div className="absolute top-4 right-4 flex gap-3">
+            <button 
+              onClick={() => setSelectedGalleryPhoto(null)}
+              className="p-3 bg-white/10 text-white rounded-full hover:bg-white/20 active:scale-95 transition-all"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="max-w-3xl w-full max-h-[75vh] flex items-center justify-center select-none" onClick={e => e.stopPropagation()}>
+            <img 
+              src={selectedGalleryPhoto} 
+              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-300" 
+              alt="Zoomed Appraisal Asset"
+            />
+          </div>
+          <div className="absolute bottom-10 text-center text-white/60 text-xs font-bold uppercase tracking-widest select-none">
+            Gesture & Zoom Enabled
+          </div>
+        </div>
+      )}
+
+      {/* Select from Appraisal Images Modal */}
+      {isAppPhotoModalOpen && targetAssignPoint && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] flex items-end justify-center animate-in fade-in duration-300"
+          onClick={() => {
+            setIsAppPhotoModalOpen(false);
+            setTargetAssignPoint(null);
+          }}
+        >
+          <div 
+            className="w-full max-w-lg bg-surface-card rounded-t-[2.5rem] p-6 space-y-5 border-t border-border-subtle shadow-2xl flex flex-col max-h-[70vh] animate-in slide-in-from-bottom duration-300"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border-subtle pb-4">
+              <div>
+                <h3 className="text-sm font-bold text-text-main">Appraisal Media Library</h3>
+                <p className="text-[9px] text-text-secondary font-bold uppercase tracking-wider mt-1">Select an existing photo to assign to checklist</p>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsAppPhotoModalOpen(false);
+                  setTargetAssignPoint(null);
+                }}
+                className="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center text-text-secondary hover:text-text-main transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Photos Grid */}
+            <div className="flex-1 overflow-y-auto no-scrollbar py-2">
+              {lead.photos && lead.photos.length > 0 ? (
+                <div className="grid grid-cols-3 gap-3">
+                  {lead.photos.map((photo: string, index: number) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        updatePoint(targetAssignPoint.category, targetAssignPoint.pointId, { photo });
+                        setIsAppPhotoModalOpen(false);
+                        setTargetAssignPoint(null);
+                      }}
+                      className="aspect-square rounded-xl overflow-hidden border border-border-subtle hover:border-primary-main focus:border-primary-main transition-all group relative active:scale-95"
+                    >
+                      <img src={photo} className="w-full h-full object-cover group-hover:scale-105 transition-transform animate-in fade-in duration-200" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold uppercase tracking-widest">
+                        Select
+                      </div>
+                      <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                        #{index + 1}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-text-muted">
+                  <ImageIcon size={32} className="mx-auto mb-3 opacity-30" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest">No appraisal photos available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -629,7 +746,7 @@ function Badge({ children, variant, className }: any) {
   return (
     <span className={cn(
       "px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest",
-      variant === 'primary' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-slate-50 text-slate-500 border border-slate-100',
+      variant === 'primary' ? 'bg-primary-subtle text-primary-main border border-primary-main/20' : 'bg-surface-hover text-text-secondary border border-border-subtle',
       className
     )}>
       {children}

@@ -14,7 +14,7 @@ export default function Notifications() {
 
   useEffect(() => {
     if (!session) return;
-    fetch(`http://localhost:3000/notifications?recipientId=${session.user.id}`, {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications?recipientId=${session.user.id}`, {
       headers: { 'Authorization': `Bearer ${session.access_token}` }
     })
       .then(r => r.json())
@@ -31,7 +31,7 @@ export default function Notifications() {
   const markRead = async (id: string) => {
     if (!session) return;
     try {
-      await fetch(`http://localhost:3000/notifications/${id}/read`, {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications/${id}/read`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       });
@@ -44,7 +44,7 @@ export default function Notifications() {
   const markAllRead = async () => {
     if (!session) return;
     try {
-      await fetch('http://localhost:3000/notifications/mark-all-read', {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications/mark-all-read`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       });
@@ -58,17 +58,17 @@ export default function Notifications() {
     switch (type) {
       case 'INSPECTION_ALERT': return <AlertTriangle className="text-amber-500" size={16} />;
       case 'APPROVAL': return <CheckCircle2 className="text-emerald-500" size={16} />;
-      case 'MESSAGE': return <MessageSquare className="text-indigo-500" size={16} />;
-      default: return <Info className="text-slate-400" size={16} />;
+      case 'MESSAGE': return <MessageSquare className="text-primary-main" size={16} />;
+      default: return <Info className="text-text-muted" size={16} />;
     }
   };
 
   const getBgColor = (type: string) => {
     switch (type) {
-      case 'INSPECTION_ALERT': return 'bg-amber-50';
-      case 'APPROVAL': return 'bg-emerald-50';
-      case 'MESSAGE': return 'bg-indigo-50';
-      default: return 'bg-slate-50';
+      case 'INSPECTION_ALERT': return 'bg-amber-500/10';
+      case 'APPROVAL': return 'bg-emerald-500/10';
+      case 'MESSAGE': return 'bg-primary-subtle';
+      default: return 'bg-surface-hover';
     }
   };
 
@@ -79,12 +79,12 @@ export default function Notifications() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-400 transition-all">
+          <button onClick={() => navigate(-1)} className="p-2 rounded-xl bg-surface-hover hover:bg-surface-hover/80 text-text-secondary transition-all">
             <ChevronLeft size={18} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Notifications</h1>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest leading-none mt-0.5">
+            <h1 className="text-2xl font-bold text-text-main tracking-tight">Notifications</h1>
+            <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest leading-none mt-0.5">
               {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
             </p>
           </div>
@@ -92,7 +92,7 @@ export default function Notifications() {
         {unreadCount > 0 && (
           <button
             onClick={markAllRead}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-indigo-100 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-subtle text-primary-main rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-primary-subtle/80 transition-all"
           >
             <Check size={12} /> Mark all read
           </button>
@@ -102,14 +102,14 @@ export default function Notifications() {
       {/* Content */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <div className="w-10 h-10 border-2 border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
-          <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Loading...</p>
+          <div className="w-10 h-10 border-2 border-primary-subtle border-t-primary-main rounded-full animate-spin" />
+          <p className="text-text-muted font-bold uppercase tracking-widest text-[9px]">Loading...</p>
         </div>
       ) : notifications.length === 0 ? (
-        <div className="py-24 text-center ios-card bg-slate-50/50 border-dashed">
-          <Bell size={32} className="mx-auto text-slate-200 mb-4" />
-          <p className="text-slate-400 font-bold text-[11px]">No notifications yet</p>
-          <p className="text-slate-300 text-[10px] mt-1">You'll be notified about important updates here</p>
+        <div className="py-24 text-center native-card bg-surface-card border-dashed">
+          <Bell size={32} className="mx-auto text-text-muted/30 mb-4" />
+          <p className="text-text-secondary font-bold text-[11px]">No notifications yet</p>
+          <p className="text-text-muted text-[10px] mt-1">You'll be notified about important updates here</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -117,8 +117,8 @@ export default function Notifications() {
             <button
               key={n.id}
               onClick={() => markRead(n.id)}
-              className={`w-full text-left ios-card p-5 group transition-all relative overflow-hidden ${
-                n.isRead ? 'opacity-60' : 'ios-shadow'
+              className={`w-full text-left native-card p-5 group transition-all relative overflow-hidden bg-surface-card ${
+                n.isRead ? 'opacity-60' : 'shadow-lg shadow-black/5'
               }`}
             >
               <div className="flex items-start gap-4">
@@ -127,14 +127,14 @@ export default function Notifications() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start gap-2">
-                    <h3 className={`text-sm font-bold tracking-tight ${n.isRead ? 'text-slate-400' : 'text-slate-900'}`}>
+                    <h3 className={`text-sm font-bold tracking-tight ${n.isRead ? 'text-text-muted' : 'text-text-main'}`}>
                       {n.title}
                     </h3>
-                    <span className="text-[9px] font-bold text-slate-300 uppercase shrink-0">
+                    <span className="text-[9px] font-bold text-text-muted uppercase shrink-0">
                       {new Date(n.createdAt || n.created_at).toLocaleDateString()}
                     </span>
                   </div>
-                  <p className={`text-[11px] mt-1 leading-relaxed ${n.isRead ? 'text-slate-300' : 'text-slate-500'}`}>
+                  <p className={`text-[11px] mt-1 leading-relaxed ${n.isRead ? 'text-text-muted' : 'text-text-secondary'}`}>
                     {n.message}
                   </p>
                 </div>
@@ -142,7 +142,7 @@ export default function Notifications() {
 
               {/* Unread indicator */}
               {!n.isRead && (
-                <div className="absolute left-0 top-0 w-1 h-full bg-indigo-500 rounded-r" />
+                <div className="absolute left-0 top-0 w-1 h-full bg-primary-main rounded-r" />
               )}
             </button>
           ))}
