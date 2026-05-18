@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { fetchWithCache, apiCache } from '../lib/cache';
 
 export default function ActiveConversations() {
   const { session } = useAuth();
@@ -35,6 +36,9 @@ export default function ActiveConversations() {
     
     const channel = supabase.channel('staff_convs')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
+        // Clear cache and refetch fresh when supabase signals update
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        apiCache.clear(`${apiUrl}/messages/conversations_GET_""`);
         fetchConversations();
       })
       .subscribe();
@@ -55,6 +59,9 @@ export default function ActiveConversations() {
           table: 'messages',
           filter: `conversation_id=eq.${selectedConv.id}`
         }, () => {
+          // Clear cache and refetch fresh when new message comes in
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+          apiCache.clear(`${apiUrl}/messages/${selectedConv.id}_GET_""`);
           fetchMessages(selectedConv.id);
         })
         .subscribe();
@@ -71,11 +78,15 @@ export default function ActiveConversations() {
 
   const fetchConversations = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/messages/conversations`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      setConversations(Array.isArray(data) ? data : []);
+      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/messages/conversations`;
+      await fetchWithCache(
+        url,
+        { headers: { 'Authorization': `Bearer ${token}` } },
+        (data) => {
+          setConversations(Array.isArray(data) ? data : []);
+        },
+        60000 // 60s TTL for active conversations list
+      );
     } catch (e) {
       console.error(e);
     } finally {
@@ -84,11 +95,19 @@ export default function ActiveConversations() {
   };
 
   const fetchMessages = async (id: string) => {
-    const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/messages/${id}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await res.json();
-    setMessages(Array.isArray(data) ? data : []);
+    try {
+      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/messages/${id}`;
+      await fetchWithCache(
+        url,
+        { headers: { 'Authorization': `Bearer ${token}` } },
+        (data) => {
+          setMessages(Array.isArray(data) ? data : []);
+        },
+        30000 // 30s TTL for messages
+      );
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleSend = async (e: React.FormEvent) => {
@@ -96,7 +115,8 @@ export default function ActiveConversations() {
     if (!inputText.trim() || !selectedConv) return;
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/messages`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${apiUrl}/messages`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -108,8 +128,19 @@ export default function ActiveConversations() {
         })
       });
       const msg = await res.json();
-      setMessages([...messages, msg]);
+      
+      // Update local state + Cache immediately so UI is extremely fast
+      const updatedMessages = [...messages, msg];
+      setMessages(updatedMessages);
+      
+      const msgsKey = `${apiUrl}/messages/${selectedConv.id}_GET_""`;
+      apiCache.set(msgsKey, updatedMessages);
+
       setInputText('');
+
+      // Also clear the conversations list cache since the last message changed
+      const convsKey = `${apiUrl}/messages/conversations_GET_""`;
+      apiCache.clear(convsKey);
       fetchConversations();
     } catch (e) {
       console.error(e);

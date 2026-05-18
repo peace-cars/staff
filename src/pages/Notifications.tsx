@@ -5,6 +5,7 @@ import {
   Info, MessageSquare, Check
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
+import { fetchWithCache, apiCache } from '../lib/cache';
 
 export default function Notifications() {
   const navigate = useNavigate();
@@ -12,30 +13,38 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const cacheKey = session ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications?recipientId=${session.user.id}_GET_""` : '';
+
   useEffect(() => {
     if (!session) return;
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications?recipientId=${session.user.id}`, {
-      headers: { 'Authorization': `Bearer ${session.access_token}` }
-    })
-      .then(r => r.json())
-      .then(data => {
+    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications?recipientId=${session.user.id}`;
+    
+    fetchWithCache(
+      url,
+      { headers: { 'Authorization': `Bearer ${session.access_token}` } },
+      (data) => {
         setNotifications(Array.isArray(data) ? data : []);
         setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
+      },
+      300000 // 5 minutes TTL
+    ).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
   }, [session]);
 
   const markRead = async (id: string) => {
     if (!session) return;
+    // Optimistic UI + Cache update
+    const updated = notifications.map(n => n.id === id ? { ...n, isRead: true } : n);
+    setNotifications(updated);
+    if (cacheKey) apiCache.set(cacheKey, updated);
+
     try {
       await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications/${id}/read`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       });
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     } catch (e) {
       console.error(e);
     }
@@ -43,12 +52,16 @@ export default function Notifications() {
 
   const markAllRead = async () => {
     if (!session) return;
+    // Optimistic UI + Cache update
+    const updated = notifications.map(n => ({ ...n, isRead: true }));
+    setNotifications(updated);
+    if (cacheKey) apiCache.set(cacheKey, updated);
+
     try {
       await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications/mark-all-read`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       });
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     } catch (e) {
       console.error(e);
     }

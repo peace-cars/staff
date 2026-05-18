@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ShieldAlert, ShieldCheck, ChevronLeft, Save, AlertTriangle, Activity, 
   Phone, User, DollarSign, Image as ImageIcon, Shield, ArrowRight, CheckCircle2,
-  XCircle, CarFront, Zap, FileText, Camera, Clock, Loader2, Trash2, ChevronRight
+  XCircle, CarFront, Zap, FileText, Camera, Clock, Loader2, Trash2, ChevronRight,
+  X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../lib/auth';
 import { cn } from '../lib/utils';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import { motion } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
 
 interface InspectionPoint {
   id: string;
@@ -111,6 +113,7 @@ export default function InspectionForm() {
   const [lead, setLead] = useState<any>(null);
   const [commRate, setCommRate] = useState(0.01);
   const [fetchError, setFetchError] = useState('');
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session) return;
@@ -158,19 +161,54 @@ export default function InspectionForm() {
   const handlePhotoUpload = async (category: string, pointId: string, file: File) => {
     if (!session) return;
     setUploadingPointId(pointId);
+    setUploadError(null);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('bucket', 'vehicles');
-      fd.append('folder', `inspections/${leadId}`);
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/storage/upload`, {
-        method: 'POST', headers: { 'Authorization': `Bearer ${session.access_token}` }, body: fd
-      });
-      if (!res.ok) throw new Error('Upload failed');
-      const { url } = await res.json();
-      updatePoint(category, pointId, { photo: url });
-    } catch (e) { console.error(e); alert('Photo upload failed'); }
-    finally { setUploadingPointId(null); }
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const authHeader = { 'Authorization': `Bearer ${session.access_token}` };
+
+      if (Capacitor.isNativePlatform()) {
+        // Native Android: Use base64 JSON upload (FormData is unreliable on Capacitor)
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).split(',')[1]); // strip data: prefix
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const res = await fetch(`${apiUrl}/storage/upload-base64`, {
+          method: 'POST',
+          headers: { ...authHeader, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            base64Data: base64,
+            mimeType: file.type || 'image/jpeg',
+            folder: `inspections/${leadId}`,
+            bucket: 'vehicles'
+          })
+        });
+        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+        const { url } = await res.json();
+        updatePoint(category, pointId, { photo: url });
+      } else {
+        // Web: Standard FormData upload
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('bucket', 'vehicles');
+        fd.append('folder', `inspections/${leadId}`);
+        const res = await fetch(`${apiUrl}/storage/upload`, {
+          method: 'POST',
+          headers: authHeader,
+          body: fd
+        });
+        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+        const { url } = await res.json();
+        updatePoint(category, pointId, { photo: url });
+      }
+    } catch (e: any) {
+      console.error('[Upload]', e);
+      setUploadError(e?.message || 'Photo upload failed. Please try again.');
+      setTimeout(() => setUploadError(null), 4000);
+    } finally {
+      setUploadingPointId(null);
+    }
   };
 
   const handleSubmit = async (statusOverride?: string) => {
@@ -252,72 +290,117 @@ export default function InspectionForm() {
   const isHighRisk = avg < 40 || scores.mechanical < 50;
 
   const renderPoint = (category: string, point: InspectionPoint) => (
-    <div key={point.id} className="p-4 rounded-2xl bg-surface-hover/50 border border-border-subtle space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] font-bold text-text-main uppercase tracking-wider">{point.label}</p>
-        <div className="flex bg-bg-base rounded-lg p-1 border border-border-subtle shadow-sm">
+    <div key={point.id} className="rounded-2xl bg-surface-card border border-border-subtle/50 overflow-hidden shadow-sm">
+      {/* Header row: label + pass/fail toggle */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle/40">
+        <p className="text-[11px] font-bold text-text-main uppercase tracking-wider flex-1 pr-3 leading-tight">{point.label}</p>
+        <div className="flex rounded-xl overflow-hidden border border-border-subtle shadow-sm shrink-0">
           <button 
             onClick={() => updatePoint(category, point.id, { status: 'pass' })}
             className={cn(
-              "w-8 h-8 rounded-md flex items-center justify-center transition-all",
-              point.status === 'pass' ? "bg-emerald-500 text-white" : "text-text-muted hover:bg-surface-hover"
+              "h-10 px-4 flex items-center gap-1.5 text-[11px] font-bold transition-all",
+              point.status === 'pass'
+                ? "bg-emerald-500 text-white"
+                : "bg-surface-hover text-text-muted hover:bg-emerald-500/10 hover:text-emerald-500"
             )}
           >
-            <CheckCircle2 size={16} />
+            <CheckCircle2 size={14} />
+            <span>Pass</span>
           </button>
+          <div className="w-px bg-border-subtle" />
           <button 
             onClick={() => updatePoint(category, point.id, { status: 'fail' })}
             className={cn(
-              "w-8 h-8 rounded-md flex items-center justify-center transition-all",
-              point.status === 'fail' ? "bg-red-500 text-white" : "text-text-muted hover:bg-surface-hover"
+              "h-10 px-4 flex items-center gap-1.5 text-[11px] font-bold transition-all",
+              point.status === 'fail'
+                ? "bg-red-500 text-white"
+                : "bg-surface-hover text-text-muted hover:bg-red-500/10 hover:text-red-500"
             )}
           >
-            <XCircle size={16} />
+            <XCircle size={14} />
+            <span>Fail</span>
           </button>
         </div>
       </div>
-      <div className="flex gap-2">
+
+      {/* Notes input */}
+      <div className="px-4 py-3">
         <input 
           placeholder="Observation notes..."
           value={point.notes}
           onChange={(e) => updatePoint(category, point.id, { notes: e.target.value })}
-          className="flex-1 bg-surface-card border border-border-subtle rounded-lg p-2 text-[10px] font-medium text-text-main placeholder:text-text-muted focus:outline-none focus:border-primary-main"
+          className="w-full bg-bg-secondary border border-border-subtle/40 rounded-xl px-3 py-2.5 text-[12px] text-text-main placeholder:text-text-muted focus:outline-none focus:border-primary-main/60 transition-all"
         />
-        <div className="w-20 h-10 shrink-0">
-          {point.photo ? (
-            <div className="relative w-full h-full rounded-lg overflow-hidden border border-border-subtle group">
-              <img src={point.photo} className="w-full h-full object-cover" />
-              <button onClick={() => updatePoint(category, point.id, { photo: undefined })} className="absolute inset-0 bg-red-500/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center"><Trash2 size={12} /></button>
-            </div>
-          ) : (
-            <div className="flex gap-0.5 h-full">
-              <label className="flex-1 h-full rounded-l-lg border border-dashed border-border-subtle flex flex-col items-center justify-center text-text-muted hover:text-primary-main cursor-pointer bg-surface-card transition-colors" title="Camera">
-                {uploadingPointId === point.id ? <Loader2 size={10} className="animate-spin" /> : <Camera size={10} />}
-                <input type="file" className="hidden" accept="image/*" capture="environment" onChange={e => { const f=e.target.files?.[0]; if(f) handlePhotoUpload(category, point.id, f); }} disabled={!!uploadingPointId} />
-              </label>
-              <label className="flex-1 h-full border border-dashed border-border-subtle flex flex-col items-center justify-center text-text-muted hover:text-primary-main cursor-pointer bg-surface-card transition-colors" title="Upload File">
-                {uploadingPointId === point.id ? <Loader2 size={10} className="animate-spin" /> : <ImageIcon size={10} />}
-                <input type="file" className="hidden" accept="image/*" onChange={e => { const f=e.target.files?.[0]; if(f) handlePhotoUpload(category, point.id, f); }} disabled={!!uploadingPointId} />
-              </label>
-              <button 
-                onClick={() => {
-                  setTargetAssignPoint({ category, pointId: point.id });
-                  setIsAppPhotoModalOpen(true);
-                }}
-                className="flex-1 h-full rounded-r-lg border border-dashed border-border-subtle flex flex-col items-center justify-center text-text-muted hover:text-primary-main bg-surface-card transition-colors"
-                title="Select from Appraisal Images"
-              >
-                <ArrowRight size={10} className="rotate-45" />
-              </button>
-            </div>
-          )}
-        </div>
+      </div>
+
+      {/* Photo section */}
+      <div className="px-4 pb-4">
+        {point.photo ? (
+          <div className="relative w-full h-28 rounded-xl overflow-hidden border border-border-subtle group">
+            <img src={point.photo} className="w-full h-full object-cover" alt="inspection photo" />
+            <button
+              onClick={() => updatePoint(category, point.id, { photo: undefined })}
+              className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:scale-95"
+            >
+              <Trash2 size={14} />
+            </button>
+            <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Photo attached</div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            {/* Camera capture */}
+            <label className={cn(
+              "flex items-center justify-center gap-2 h-12 rounded-xl border border-dashed border-border-subtle bg-surface-hover text-text-muted text-[11px] font-bold transition-all cursor-pointer",
+              uploadingPointId === point.id ? "opacity-50 pointer-events-none" : "hover:border-primary-main/50 hover:text-primary-main active:scale-95"
+            )}>
+              {uploadingPointId === point.id ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+              <span>Camera</span>
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                capture="environment"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(category, point.id, f); }}
+                disabled={!!uploadingPointId}
+              />
+            </label>
+
+            {/* Gallery picker */}
+            <label className={cn(
+              "flex items-center justify-center gap-2 h-12 rounded-xl border border-dashed border-border-subtle bg-surface-hover text-text-muted text-[11px] font-bold transition-all cursor-pointer",
+              uploadingPointId === point.id ? "opacity-50 pointer-events-none" : "hover:border-primary-main/50 hover:text-primary-main active:scale-95"
+            )}>
+              {uploadingPointId === point.id ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+              <span>Gallery</span>
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(category, point.id, f); }}
+                disabled={!!uploadingPointId}
+              />
+            </label>
+          </div>
+        )}
       </div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-bg-base flex flex-col pb-24 relative font-sans text-text-main transition-colors duration-300">
+      {/* Upload Error Toast */}
+      {uploadError && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] bg-red-600 text-white text-[12px] font-bold px-4 py-3 rounded-2xl shadow-lg border border-red-500/50 flex items-center gap-2 max-w-sm w-[90%] justify-between animate-in fade-in slide-in-from-bottom duration-300">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={16} className="shrink-0" />
+            <span>{uploadError}</span>
+          </div>
+          <button onClick={() => setUploadError(null)} className="p-1 hover:bg-white/10 rounded-lg transition-colors shrink-0">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Dynamic Mobile Header */}
       <header className="sticky top-0 bg-surface-card/90 backdrop-blur-xl border-b border-border-subtle z-50 px-5 py-4 flex items-center gap-3 shadow-md">
         <button onClick={() => navigate('/')} className="p-2 rounded-xl bg-surface-hover text-text-secondary hover:bg-surface-hover/80 transition-all">

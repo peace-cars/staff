@@ -1,13 +1,11 @@
 import { 
-  CheckCircle2, LayoutGrid, Users, Shield, Banknote, MessageCircle, Star, Bell, LogOut, User, Sun, Moon, ScanLine, Camera 
+  CheckCircle2, LayoutGrid, Users, Shield, Banknote, MessageCircle, Bell, LogOut, User, Sun, Moon
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../lib/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { useState } from 'react';
-import { BottomSheet } from './BottomSheet';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -19,7 +17,6 @@ export function AppShell({ children }: AppShellProps) {
   const location = useLocation();
   const { session, logout } = useAuth();
   const profile = session?.profile;
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const navItems = [
     { label: 'Leads', icon: CheckCircle2, path: '/', id: 'leads' },
@@ -33,10 +30,6 @@ export function AppShell({ children }: AppShellProps) {
     navItems.splice(2, 0, { label: 'Team', icon: Users, path: '/team', id: 'team' });
     navItems.splice(3, 0, { label: 'Vault', icon: Shield, path: '/showroom', id: 'showroom' });
   }
-
-  const displayItems = [...navItems];
-  const midIndex = Math.floor(displayItems.length / 2);
-  displayItems.splice(midIndex, 0, { label: 'Scan', icon: ScanLine, path: 'SCANNER_FAB', id: 'scan-fab' });
 
   const handleLogout = () => {
     logout();
@@ -95,20 +88,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Bottom Mobile Navigation */}
       <nav className="fixed bottom-3 left-1/2 -translate-x-1/2 w-[95%] max-w-md bg-surface-card rounded-[2.2rem] p-1.5 flex justify-between items-center shadow-xl shadow-black/35 z-[100] border border-border-subtle">
-         {displayItems.map((item) => {
-           if (item.path === 'SCANNER_FAB') {
-             return (
-               <div key="scan-fab-container" className="flex-1 flex items-center justify-center py-1">
-                 <button 
-                   onClick={() => setIsScannerOpen(true)}
-                   className="w-12 h-12 bg-primary-main text-white rounded-full flex items-center justify-center shadow-lg shadow-primary-main/20 active:scale-95 transition-transform shrink-0 border border-primary-main"
-                 >
-                   <ScanLine size={18} />
-                 </button>
-               </div>
-             );
-           }
-
+         {navItems.map((item) => {
            const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
            
            return (
@@ -128,39 +108,12 @@ export function AppShell({ children }: AppShellProps) {
                  />
                )}
                <item.icon size={18} className={cn("transition-transform", isActive ? "scale-110" : "group-hover:scale-105 opacity-80 group-hover:opacity-100")} />
-               {!isActive && <span className="text-[7px] font-bold uppercase tracking-[0.1em] mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity hidden md:inline">{item.label}</span>}
+               {isActive && <span className="text-[7px] font-bold uppercase tracking-[0.1em] mt-0.5">{item.label}</span>}
              </button>
            );
          })}
       </nav>
 
-            {/* Mobile-First Scanner Sheet */}
-      <BottomSheet 
-        isOpen={isScannerOpen} 
-        onClose={() => setIsScannerOpen(false)}
-        title="Asset Scanner"
-        height="half"
-      >
-        <div className="flex flex-col items-center justify-center h-full space-y-6">
-          <div className="w-full max-w-xs aspect-square border-2 border-dashed border-border-subtle rounded-3xl flex flex-col items-center justify-center bg-surface-hover text-text-muted relative overflow-hidden">
-            <Camera size={48} className="mb-4 opacity-50" />
-            <p className="text-xs font-bold uppercase tracking-widest text-center px-8">Point camera at vehicle QR or VIN barcode</p>
-            
-            {/* Animated scanning line */}
-            <motion.div 
-              animate={{ top: ['0%', '100%', '0%'] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-              className="absolute left-0 right-0 h-0.5 bg-primary-main shadow-lg shadow-primary-main/50 z-10"
-            />
-          </div>
-          <button 
-            onClick={() => setIsScannerOpen(false)}
-            className="w-full max-w-xs py-4 rounded-xl bg-surface-hover text-text-secondary font-bold text-xs uppercase tracking-widest active:scale-95 transition-transform"
-          >
-            Cancel Scan
-          </button>
-        </div>
-      </BottomSheet>
     </div>
   );
 }

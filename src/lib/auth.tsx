@@ -7,7 +7,7 @@ const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   const isNative = Capacitor.isNativePlatform();
   const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  return (isLocalhost && !isNative) ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}` : 'https://backend-eabm.onrender.com';
+  return (isLocalhost && !isNative) ? 'http://localhost:3000' : 'https://backend-eabm.onrender.com';
 };
 
 const API_URL = getApiUrl();
@@ -59,43 +59,106 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem('staff_session');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        
-        // Expiration Pulse: Check if session is already dead (Unix timestamp)
-        const nowSec = Math.floor(Date.now() / 1000);
-        if (parsed.expires_at && parsed.expires_at < nowSec) {
-          console.warn('[Staff Auth] Session expired, clearing stale token.');
+    const initAuth = async () => {
+      const stored = localStorage.getItem('staff_session');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          const nowSec = Math.floor(Date.now() / 1000);
+          
+          // If token has expired or has less than 15 minutes remaining, refresh it!
+          if (parsed.expires_at && parsed.expires_at - nowSec < 900) {
+            console.log('[Staff Auth] Token is expiring or expired, attempting refresh...');
+            if (parsed.refresh_token) {
+              const { data, error } = await supabase.auth.refreshSession({
+                refresh_token: parsed.refresh_token
+              });
+              
+              if (!error && data?.session) {
+                const newSessionData: SessionData = {
+                  access_token: data.session.access_token,
+                  refresh_token: data.session.refresh_token,
+                  expires_at: data.session.expires_at || Math.floor(Date.now() / 1000) + 3600,
+                  user: parsed.user,
+                  profile: parsed.profile
+                };
+                localStorage.setItem('staff_session', JSON.stringify(newSessionData));
+                localStorage.setItem('staffId', parsed.user.id);
+                setSession(newSessionData);
+                await supabase.auth.setSession({
+                  access_token: data.session.access_token,
+                  refresh_token: data.session.refresh_token
+                });
+                setLoading(false);
+                return;
+              } else {
+                console.warn('[Staff Auth] Refresh failed, logging out:', error?.message);
+                localStorage.removeItem('staff_session');
+                localStorage.removeItem('staffId');
+                setSession(null);
+              }
+            } else {
+              localStorage.removeItem('staff_session');
+              localStorage.removeItem('staffId');
+              setSession(null);
+            }
+          } else {
+            setSession(parsed);
+            await supabase.auth.setSession({
+              access_token: parsed.access_token,
+              refresh_token: parsed.refresh_token
+            });
+          }
+        } catch (e) {
+          console.error('[Staff Auth] Init error:', e);
           localStorage.removeItem('staff_session');
-          localStorage.removeItem('staffId');
-          setSession(null);
-        } else {
-          setSession(parsed);
-          // Sync Supabase client
-          supabase.auth.setSession({
-            access_token: parsed.access_token,
-            refresh_token: parsed.refresh_token
-          });
         }
-      } catch {
-        localStorage.removeItem('staff_session');
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    initAuth();
+
+    const fallbackTimer = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
+    return () => clearTimeout(fallbackTimer);
   }, []);
 
-  // Periodic token expiry check - force logout if token expires mid-session
+  // Periodic background token refresh check
   useEffect(() => {
-    if (!session?.expires_at) return;
-    const interval = setInterval(() => {
+    if (!session?.expires_at || !session?.refresh_token) return;
+    const interval = setInterval(async () => {
       const nowSec = Math.floor(Date.now() / 1000);
-      if (session.expires_at < nowSec) {
-        console.warn('[Staff Auth] Token expired mid-session, logging out.');
-        logout();
+      
+      // If token expires in less than 15 minutes, refresh in background
+      if (session.expires_at - nowSec < 900) {
+        console.log('[Staff Auth] Background token refresh triggered...');
+        const { data, error } = await supabase.auth.refreshSession({
+          refresh_token: session.refresh_token
+        });
+        
+        if (!error && data?.session) {
+          const newSessionData: SessionData = {
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+            expires_at: data.session.expires_at || Math.floor(Date.now() / 1000) + 3600,
+            user: session.user,
+            profile: session.profile
+          };
+          localStorage.setItem('staff_session', JSON.stringify(newSessionData));
+          setSession(newSessionData);
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token
+          });
+          console.log('[Staff Auth] Background token refresh successful.');
+        } else {
+          console.warn('[Staff Auth] Background refresh failed:', error?.message);
+        }
       }
-    }, 30000); // Check every 30 seconds
+    }, 60000); // Check every 60 seconds
     return () => clearInterval(interval);
   }, [session?.expires_at, logout]);
 

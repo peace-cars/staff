@@ -12,9 +12,17 @@ import Notifications from './pages/Notifications';
 import ActiveConversations from './pages/ActiveConversations';
 import Splash from './components/ui/Splash';
 import { ApplePageTransition } from './components/ui/ApplePageTransition';
+import { initializePushNotifications } from './lib/push';
+import { useEffect } from 'react';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      initializePushNotifications(session.user.id, session.access_token || '');
+    }
+  }, [session]);
   
   if (loading) {
     return (
