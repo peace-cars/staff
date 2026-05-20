@@ -196,7 +196,7 @@ export default function ActiveConversations() {
     return (
       <div className="max-md:fixed max-md:inset-0 max-md:z-[150] max-md:bg-bg-base max-md:flex max-md:flex-col md:flex md:flex-col md:h-[calc(100vh-210px)] md:max-h-[calc(100vh-210px)] animate-in fade-in duration-300">
         {/* Chat Header */}
-        <div className="flex items-center gap-3 pb-4 border-b border-border-subtle max-md:pt-[calc(12px+env(safe-area-inset-top,20px))] max-md:px-4 max-md:pb-3 max-md:bg-surface-card max-md:shadow-sm">
+        <div className="flex items-center gap-3 pb-4 border-b border-border-subtle max-md:pt-[calc(28px+env(safe-area-inset-top,20px))] max-md:px-4 max-md:pb-3 max-md:bg-surface-card max-md:shadow-sm">
           <button 
             onClick={() => setSelectedConv(null)} 
             className="p-2 rounded-xl bg-surface-hover text-text-secondary hover:bg-surface-hover/80 transition-all"

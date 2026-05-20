@@ -3,6 +3,7 @@
 
 :root {
   /* Modern Desktop Palette - Professional & Solid */
+  --color-bg: #FFFFFF;
   --color-bg-base: #F1F3F9;
   --color-bg-sidebar: #FFFFFF;
   --color-surface-card: #FFFFFF;
@@ -25,6 +26,7 @@
 
 .dark {
   /* Premium OLED Pitch Black — Real Dark (Slate-Free) */
+  --color-bg: #000000;
   --color-bg-base: #000000;
   --color-bg-sidebar: #0A0A0A;
   --color-surface-card: #0D0D0D;
@@ -45,6 +47,7 @@
 }
 
 @theme {
+  --color-bg: var(--color-bg);
   --color-bg-base: var(--color-bg-base);
   --color-bg-sidebar: var(--color-bg-sidebar);
   --color-surface-card: var(--color-surface-card);

@@ -170,7 +170,7 @@ export default function InventoryModule() {
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest">{vehicle.year}</span>
                       <span className="w-1 h-1 bg-border-subtle rounded-full" />
-                      <span className="text-primary-main text-[9px] font-bold uppercase tracking-wider">{vehicle.duty?.replace('_', ' ')}</span>
+                      <span className="text-primary-main text-[9px] font-bold uppercase tracking-wider">{vehicle.duty === 'DUTY_PAID' ? 'Tax Paid' : vehicle.duty === 'DUTY_FREE' ? 'Tax Exempt' : vehicle.duty?.replace('_', ' ')}</span>
                     </div>
                   </div>
                 </div>
@@ -249,7 +249,7 @@ export default function InventoryModule() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest ml-1">Duty Status</label>
+                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest ml-1">Tax Status</label>
                   <div className="grid grid-cols-2 gap-3">
                     {['DUTY_PAID', 'DUTY_FREE'].map(status => (
                       <button
@@ -263,7 +263,7 @@ export default function InventoryModule() {
                             : "bg-bg-base border-border-subtle text-text-secondary hover:bg-surface-hover"
                         )}
                       >
-                        {status.replace('_', ' ')}
+                        {status === 'DUTY_PAID' ? 'Tax Paid' : 'Tax Exempt'}
                       </button>
                     ))}
                   </div>
