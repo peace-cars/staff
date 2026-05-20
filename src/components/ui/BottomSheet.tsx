@@ -50,7 +50,7 @@ export function BottomSheet({ isOpen, onClose, title, children, height = 'auto' 
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className={cn(
-              "fixed bottom-0 left-0 right-0 z-[110] bg-surface-card text-text-main border-t border-border-subtle rounded-t-3xl shadow-2xl flex flex-col",
+              "fixed bottom-0 left-0 right-0 z-[110] bg-surface-card text-text-main border-t border-border-subtle rounded-t-3xl shadow-2xl flex flex-col md:max-w-2xl md:mx-auto md:rounded-3xl md:bottom-6 md:border md:h-[85vh] md:left-1/2 md:-translate-x-1/2",
               heightClass
             )}
             drag="y"

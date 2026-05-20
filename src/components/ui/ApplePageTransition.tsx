@@ -35,8 +35,6 @@ export function ApplePageTransition({ children, backPath }: ApplePageTransitionP
       onDragEnd={handleDragEnd}
       className="min-h-screen bg-bg-base relative touch-pan-y overflow-x-hidden flex flex-col"
     >
-      {/* Left swipe margin helper to simulate native back triggers */}
-      <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-black/5 to-transparent z-[80] pointer-events-none" />
       {children}
     </motion.div>
   );

@@ -1,10 +1,11 @@
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { api } from './api';
 
 /**
  * Register push notification listeners and request permissions on Capacitor native platforms
  */
-export async function initializePushNotifications(userId: string, token: string) {
+export async function initializePushNotifications(userId: string) {
   if (!Capacitor.isNativePlatform()) {
     console.log('[Push] Standard desktop/browser environment detected. Skipping Capacitor native push listeners.');
     return;
@@ -30,16 +31,15 @@ export async function initializePushNotifications(userId: string, token: string)
     PushNotifications.addListener('registration', async (pushToken) => {
       console.log('[Push] Native device registered with token:', pushToken.value);
       try {
-        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications/register-fcm`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            userId,
-            token: pushToken.value
-          })
+        const platform = typeof Capacitor.getPlatform === 'function' ? Capacitor.getPlatform() : 'web';
+        const deviceInfo = {
+          platform,
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+          appVersion: platform,
+        };
+        await api.post('/notifications/register-fcm', {
+          token: pushToken.value,
+          device: deviceInfo
         });
         console.log('[Push] Registered token successfully with backend');
       } catch (err) {

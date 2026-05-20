@@ -84,6 +84,7 @@ export default function InspectionForm() {
   const [finalNotes, setFinalNotes] = useState('');
   const [uploadingPointId, setUploadingPointId] = useState<string | null>(null);
   const [selectedGalleryPhoto, setSelectedGalleryPhoto] = useState<string | null>(null);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [isAppPhotoModalOpen, setIsAppPhotoModalOpen] = useState(false);
   const [targetAssignPoint, setTargetAssignPoint] = useState<{ category: string; pointId: string } | null>(null);
 
@@ -166,42 +167,27 @@ export default function InspectionForm() {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const authHeader = { 'Authorization': `Bearer ${session.access_token}` };
 
-      if (Capacitor.isNativePlatform()) {
-        // Native Android: Use base64 JSON upload (FormData is unreliable on Capacitor)
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve((reader.result as string).split(',')[1]); // strip data: prefix
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        const res = await fetch(`${apiUrl}/storage/upload-base64`, {
-          method: 'POST',
-          headers: { ...authHeader, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            base64Data: base64,
-            mimeType: file.type || 'image/jpeg',
-            folder: `inspections/${leadId}`,
-            bucket: 'vehicles'
-          })
-        });
-        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-        const { url } = await res.json();
-        updatePoint(category, pointId, { photo: url });
-      } else {
-        // Web: Standard FormData upload
-        const fd = new FormData();
-        fd.append('file', file);
-        fd.append('bucket', 'vehicles');
-        fd.append('folder', `inspections/${leadId}`);
-        const res = await fetch(`${apiUrl}/storage/upload`, {
-          method: 'POST',
-          headers: authHeader,
-          body: fd
-        });
-        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-        const { url } = await res.json();
-        updatePoint(category, pointId, { photo: url });
-      }
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]); // strip data: prefix
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch(`${apiUrl}/storage/upload-base64`, {
+        method: 'POST',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          base64Data: base64, // Wait, backend endpoint expects 'base64', not 'base64Data'
+          base64: base64,
+          filename: file.name || 'image.jpg',
+          folder: `inspections/${leadId}`,
+          bucket: 'vehicles'
+        })
+      });
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      const { url } = await res.json();
+      updatePoint(category, pointId, { photo: url });
     } catch (e: any) {
       console.error('[Upload]', e);
       setUploadError(e?.message || 'Photo upload failed. Please try again.');
@@ -415,135 +401,193 @@ export default function InspectionForm() {
         </div>
       </header>
 
-      {/* Category Summary Cards - Mobile First Layout */}
-      <main className="flex-1 p-5 w-full max-w-lg mx-auto space-y-4">
-        
-        {/* Intel Card */}
-        <div className="bg-surface-card p-0 overflow-hidden rounded-3xl shadow-lg border border-border-subtle">
-           <div className="h-48 bg-surface-hover relative flex overflow-x-auto snap-x snap-mandatory no-scrollbar border-b border-border-subtle">
-              {lead.photos && lead.photos.length > 0 ? (
-                lead.photos.map((photo: string, index: number) => (
-                  <div key={index} className="w-full h-full shrink-0 snap-center relative">
-                    <img 
-                      src={photo} 
-                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
-                      onClick={() => setSelectedGalleryPhoto(photo)}
-                      alt="Trade-In Vehicle Image"
-                    />
-                    <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md text-white text-[8px] font-bold px-2 py-0.5 rounded-md border border-white/10 uppercase tracking-widest">
-                      Photo {index + 1} of {lead.photos.length}
-                    </div>
+      {/* Category Summary Cards - Facebook Marketplace Side-by-Side style layout */}
+      <main className="flex-1 p-4 md:p-8 w-full max-w-7xl mx-auto space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* LEFT COLUMN: Premium Image Gallery & Vehicle Info */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="bg-surface-card overflow-hidden rounded-3xl shadow-xl border border-border-subtle p-4 space-y-4">
+              {/* Main Photo Display */}
+              <div className="relative aspect-[16/10] bg-surface-hover rounded-2xl overflow-hidden border border-border-subtle group">
+                {lead.photos && lead.photos[activePhotoIndex] ? (
+                  <img 
+                    src={lead.photos[activePhotoIndex]} 
+                    className="w-full h-full object-cover cursor-pointer transition-transform duration-300 hover:scale-[1.02]"
+                    onClick={() => setSelectedGalleryPhoto(lead.photos[activePhotoIndex])}
+                    alt="Active Vehicle Photo"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-text-muted">
+                    <ImageIcon size={64} className="opacity-20 animate-pulse" />
                   </div>
-                ))
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-text-muted">
-                  <ImageIcon size={48} />
+                )}
+                
+                {/* Overlay details */}
+                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[9px] font-bold px-2.5 py-1 rounded-full border border-white/10 uppercase tracking-widest z-10">
+                  #{leadId?.substring(0,6)}
+                </div>
+                
+                {lead.photos && lead.photos.length > 1 && (
+                  <>
+                    {/* Previous Button */}
+                    <button
+                      type="button"
+                      onClick={() => setActivePhotoIndex(prev => (prev - 1 + lead.photos.length) % lead.photos.length)}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center border border-white/10 hover:bg-black/70 transition active:scale-90"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+                    {/* Next Button */}
+                    <button
+                      type="button"
+                      onClick={() => setActivePhotoIndex(prev => (prev + 1) % lead.photos.length)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center border border-white/10 hover:bg-black/70 transition active:scale-90"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                  </>
+                )}
+
+                {lead.photos && lead.photos.length > 0 && (
+                  <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white text-[9px] font-bold px-2.5 py-1 rounded-lg border border-white/10 uppercase tracking-widest">
+                    Photo {activePhotoIndex + 1} of {lead.photos.length}
+                  </div>
+                )}
+              </div>
+
+              {/* Thumbnails Row */}
+              {lead.photos && lead.photos.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 pt-1 no-scrollbar scroll-smooth snap-x">
+                  {lead.photos.map((photo: string, index: number) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => setActivePhotoIndex(index)}
+                      className={cn(
+                        "w-20 h-14 rounded-xl overflow-hidden border-2 shrink-0 snap-start transition active:scale-95",
+                        activePhotoIndex === index 
+                          ? "border-primary-main shadow-lg shadow-primary-main/15 scale-[1.02]" 
+                          : "border-border-subtle hover:border-text-secondary opacity-70 hover:opacity-100"
+                      )}
+                    >
+                      <img src={photo} className="w-full h-full object-cover" alt={`Thumbnail ${index + 1}`} />
+                    </button>
+                  ))}
                 </div>
               )}
-              <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white text-[8px] font-bold px-2 py-1 rounded-full border border-white/10 uppercase tracking-widest z-10">
-                #{leadId?.substring(0,6)}
-              </div>
-           </div>
-           <div className="p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-border-subtle pb-3">
-                 <div>
-                    <p className="text-text-secondary text-[8px] font-bold uppercase tracking-widest mb-0.5">Asset Registry</p>
-                    <h2 className="text-lg font-black text-text-main tracking-tight">{lead.vehicle}</h2>
-                 </div>
-                 <div className="text-right">
-                    <p className="text-text-secondary text-[8px] font-bold uppercase tracking-widest mb-0.5">Asking Price</p>
-                    <p className="text-base font-black text-primary-main tracking-tight">{lead.user_asking_price_etb?.toLocaleString()} <span className="text-[8px]">ETB</span></p>
-                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center text-text-muted">
-                       <User size={14} />
-                    </div>
-                    <div>
-                       <p className="text-[8px] font-bold text-text-secondary uppercase tracking-widest">Customer</p>
-                       <p className="text-[10px] font-bold text-text-main">{lead.customer}</p>
-                    </div>
-                 </div>
-                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center text-text-muted">
-                       <Phone size={14} />
-                    </div>
-                    <div>
-                       <p className="text-[8px] font-bold text-text-secondary uppercase tracking-widest">Contact</p>
-                       <p className="text-[10px] font-bold text-text-main">{lead.phone}</p>
-                    </div>
-                 </div>
-              </div>
-           </div>
-        </div>
-
-        {/* Estimated Commission */}
-        <div className="bg-gradient-to-r from-primary-main to-primary-main/80 rounded-3xl p-6 text-center text-white shadow-xl relative overflow-hidden">
-           <div className="absolute top-0 right-0 p-4 opacity-10">
-              <DollarSign size={64} />
-           </div>
-           <p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-80 mb-1 relative z-10">Est. Evaluation Commission</p>
-           <h3 className="text-3xl font-black tracking-tighter relative z-10">
-             {Math.floor((lead.user_asking_price_etb || 0) * commRate).toLocaleString()}
-             <span className="text-xs font-bold ml-1 opacity-60">ETB</span>
-           </h3>
-        </div>
-
-        <h3 className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] pt-4 pl-2">Inspection Categories</h3>
-
-        {/* Category Cards */}
-        {[
-          { id: 'exterior', label: 'Exterior', icon: <CarFront size={20} />, score: scores.exterior, total: checklist.exterior.length },
-          { id: 'interior', label: 'Interior', icon: <ShieldCheck size={20} />, score: scores.interior, total: checklist.interior.length },
-          { id: 'mechanical', label: 'Mechanical', icon: <Activity size={20} />, score: scores.mechanical, total: checklist.mechanical.length },
-          { id: 'ev', label: 'EV Diagnostics', icon: <Zap size={20} />, score: null, total: checklist.ev.length },
-        ].map(cat => (
-          <motion.button
-            key={cat.id}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveSheet(cat.id as any)}
-            className="w-full bg-surface-card p-4 rounded-3xl border border-border-subtle shadow-sm flex items-center justify-between text-left group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-surface-hover text-text-muted flex items-center justify-center group-hover:bg-primary-subtle group-hover:text-primary-main transition-colors">
-                {cat.icon}
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-text-main tracking-tight">{cat.label}</h4>
-                <p className="text-[9px] text-text-secondary font-bold uppercase tracking-widest">{cat.total} Points to verify</p>
-              </div>
             </div>
-            <div className="flex items-center gap-3">
-              {cat.score !== null && (
-                <div className={cn(
-                  "px-3 py-1 rounded-full text-xs font-bold",
-                  cat.score > 70 ? "bg-emerald-500/10 text-emerald-500" : cat.score > 40 ? "bg-amber-500/10 text-amber-500" : "bg-red-500/10 text-red-500"
-                )}>
-                  {cat.score}%
+
+            {/* Vehicle Details Card */}
+            <div className="bg-surface-card p-6 rounded-3xl shadow-lg border border-border-subtle space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-border-subtle pb-4 gap-3">
+                <div>
+                  <p className="text-text-secondary text-[9px] font-bold uppercase tracking-widest mb-0.5">Asset Registry</p>
+                  <h2 className="text-2xl font-black text-text-main tracking-tight leading-none">{lead.vehicle}</h2>
                 </div>
-              )}
-              <ChevronRight size={18} className="text-text-muted" />
-            </div>
-          </motion.button>
-        ))}
+                <div className="sm:text-right">
+                  <p className="text-text-secondary text-[9px] font-bold uppercase tracking-widest mb-0.5">Asking Price</p>
+                  <p className="text-2xl font-black text-primary-main tracking-tight">{lead.user_asking_price_etb?.toLocaleString()} <span className="text-[10px] font-bold">ETB</span></p>
+                </div>
+              </div>
 
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setActiveSheet('summary')}
-          className="w-full bg-primary-main hover:bg-primary-main/90 p-4 rounded-3xl shadow-lg flex items-center justify-between text-left mt-6"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 text-white flex items-center justify-center">
-              <FileText size={20} />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-white tracking-tight">Finalize Report</h4>
-              <p className="text-[9px] text-white/70 font-bold uppercase tracking-widest">Submit for Review</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3 bg-surface-hover p-3 rounded-2xl border border-border-subtle/40">
+                  <div className="w-10 h-10 rounded-xl bg-surface-card border border-border-subtle/50 flex items-center justify-center text-text-muted">
+                    <User size={16} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">Customer</p>
+                    <p className="text-xs font-bold text-text-main">{lead.customer}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-surface-hover p-3 rounded-2xl border border-border-subtle/40">
+                  <div className="w-10 h-10 rounded-xl bg-surface-card border border-border-subtle/50 flex items-center justify-center text-text-muted">
+                    <Phone size={16} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">Contact</p>
+                    <p className="text-xs font-bold text-text-main">{lead.phone}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <ArrowRight size={18} className="text-white" />
-        </motion.button>
+
+          {/* RIGHT COLUMN: Appraisals, Categories & Actions */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Estimated Commission */}
+            <div className="bg-gradient-to-r from-primary-main to-primary-main/80 rounded-3xl p-6 text-center text-white shadow-xl relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <DollarSign size={80} />
+               </div>
+               <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80 mb-1 relative z-10">Est. Evaluation Commission</p>
+               <h3 className="text-3xl font-black tracking-tighter relative z-10">
+                 {Math.floor((lead.user_asking_price_etb || 0) * commRate).toLocaleString()}
+                 <span className="text-xs font-bold ml-1 opacity-60">ETB</span>
+               </h3>
+            </div>
+
+            <div className="bg-surface-card p-6 rounded-3xl border border-border-subtle shadow-md space-y-4">
+              <h3 className="text-[11px] font-bold text-text-secondary uppercase tracking-[0.2em]">Inspection Categories</h3>
+              
+              <div className="space-y-3">
+                {[
+                  { id: 'exterior', label: 'Exterior Inspection', icon: <CarFront size={20} />, score: scores.exterior, total: checklist.exterior.length },
+                  { id: 'interior', label: 'Interior Inspection', icon: <ShieldCheck size={20} />, score: scores.interior, total: checklist.interior.length },
+                  { id: 'mechanical', label: 'Mechanical & Engine', icon: <Activity size={20} />, score: scores.mechanical, total: checklist.mechanical.length },
+                  { id: 'ev', label: 'EV Diagnostics', icon: <Zap size={20} />, score: null, total: checklist.ev.length },
+                ].map(cat => (
+                  <motion.button
+                    key={cat.id}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setActiveSheet(cat.id as any)}
+                    className="w-full bg-surface-hover hover:bg-border-subtle/30 p-4 rounded-2xl border border-border-subtle flex items-center justify-between text-left group transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-surface-card border border-border-subtle/50 text-text-muted flex items-center justify-center group-hover:bg-primary-subtle group-hover:text-primary-main transition-colors">
+                        {cat.icon}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-text-main tracking-tight">{cat.label}</h4>
+                        <p className="text-[9px] text-text-secondary font-bold uppercase tracking-widest">{cat.total} Points to verify</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {cat.score !== null && (
+                        <div className={cn(
+                          "px-3 py-1 rounded-full text-xs font-bold",
+                          cat.score > 70 ? "bg-emerald-500/10 text-emerald-500" : cat.score > 40 ? "bg-amber-500/10 text-amber-500" : "bg-red-500/10 text-red-500"
+                        )}>
+                          {cat.score}%
+                        </div>
+                      )}
+                      <ChevronRight size={18} className="text-text-muted" />
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setActiveSheet('summary')}
+                className="w-full bg-primary-main hover:bg-primary-main/90 p-4 rounded-2xl shadow-lg flex items-center justify-between text-left mt-6"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/10 text-white flex items-center justify-center">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white tracking-tight">Finalize Report</h4>
+                    <p className="text-[9px] text-white/70 font-bold uppercase tracking-widest">Submit for Review</p>
+                  </div>
+                </div>
+                <ArrowRight size={18} className="text-white" />
+              </motion.button>
+            </div>
+          </div>
+          
+        </div>
       </main>
 
       {/* Bottom Sheets for Progressive Disclosure */}

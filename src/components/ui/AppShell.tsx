@@ -1,3 +1,4 @@
+import React, { useEffect, useRef } from 'react';
 import { 
   CheckCircle2, LayoutGrid, Users, Shield, Banknote, MessageCircle, Bell, LogOut, User, Sun, Moon
 } from 'lucide-react';
@@ -15,6 +16,7 @@ export function AppShell({ children }: AppShellProps) {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const contentRef = useRef<HTMLDivElement>(null);
   const { session, logout } = useAuth();
   const profile = session?.profile;
 
@@ -35,6 +37,12 @@ export function AppShell({ children }: AppShellProps) {
     logout();
     navigate('/login');
   };
+
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0, left: 0 });
+    contentRef.current?.focus();
+    window.scrollTo({ top: 0, left: 0 });
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-bg-base text-text-main font-sans overflow-x-hidden">
@@ -82,7 +90,7 @@ export function AppShell({ children }: AppShellProps) {
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 p-6 max-w-lg mx-auto w-full pt-[100px] pb-32">
+      <main ref={contentRef} tabIndex={-1} className="relative z-10 p-6 max-w-lg mx-auto w-full pt-[100px] pb-32">
          {children}
       </main>
 

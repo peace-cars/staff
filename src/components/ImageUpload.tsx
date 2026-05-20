@@ -22,6 +22,50 @@ export default function ImageUpload({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  
+const compressImage = (file: File, maxWidth = 1280): Promise<File> => {
+  return new Promise<File>((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const result = event.target?.result;
+      if (typeof result !== 'string') {
+        resolve(file);
+        return;
+      }
+      const img = new Image();
+      img.src = result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scaleSize = maxWidth / img.width;
+        let width = img.width;
+        let height = img.height;
+        if (scaleSize < 1) {
+          width = maxWidth;
+          height = img.height * scaleSize;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), { type: 'image/webp' }));
+            } else {
+              resolve(file);
+            }
+          }, 'image/webp', 0.85);
+        } else {
+          resolve(file);
+        }
+      };
+      img.onerror = () => resolve(file);
+    };
+    reader.onerror = () => resolve(file);
+  });
+};
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -35,7 +79,8 @@ export default function ImageUpload({
     setError(null);
     const uploadedUrls: string[] = [];
 
-    for (const file of files) {
+    for (let file of files) {
+      file = await compressImage(file);
       try {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
@@ -127,3 +172,4 @@ export default function ImageUpload({
     </div>
   );
 }
+

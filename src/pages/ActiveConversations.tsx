@@ -23,11 +23,14 @@ export default function ActiveConversations() {
   useEffect(() => {
     if (selectedConv) {
       document.body.style.overflow = 'hidden';
+      document.body.classList.add('chat-active');
     } else {
       document.body.style.overflow = '';
+      document.body.classList.remove('chat-active');
     }
     return () => {
       document.body.style.overflow = '';
+      document.body.classList.remove('chat-active');
     };
   }, [selectedConv]);
 
@@ -35,10 +38,25 @@ export default function ActiveConversations() {
     fetchConversations();
     
     const channel = supabase.channel('staff_convs')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
-        // Clear cache and refetch fresh when supabase signals update
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, (payload) => {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
         apiCache.clear(`${apiUrl}/messages/conversations_GET_""`);
+
+        if (payload.eventType === 'INSERT' && payload.new) {
+          setConversations((prev) => [payload.new, ...prev.filter((c) => c.id !== payload.new.id)]);
+          return;
+        }
+
+        if (payload.eventType === 'UPDATE' && payload.new) {
+          setConversations((prev) => prev.map((c) => c.id === payload.new.id ? payload.new : c));
+          return;
+        }
+
+        if (payload.eventType === 'DELETE' && payload.old) {
+          setConversations((prev) => prev.filter((c) => c.id !== payload.old.id));
+          return;
+        }
+
         fetchConversations();
       })
       .subscribe();
@@ -58,10 +76,19 @@ export default function ActiveConversations() {
           schema: 'public', 
           table: 'messages',
           filter: `conversation_id=eq.${selectedConv.id}`
-        }, () => {
-          // Clear cache and refetch fresh when new message comes in
+        }, (payload: any) => {
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
           apiCache.clear(`${apiUrl}/messages/${selectedConv.id}_GET_""`);
+
+          if (payload.eventType === 'INSERT' && payload.new) {
+            const newMessage = {
+              ...payload.new,
+              profiles: payload.new.profiles || { full_name: payload.new.sender_name }
+            };
+            setMessages((prev) => [...prev, newMessage]);
+            return;
+          }
+
           fetchMessages(selectedConv.id);
         })
         .subscribe();
@@ -110,8 +137,7 @@ export default function ActiveConversations() {
     }
   };
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const sendMessage = async () => {
     if (!inputText.trim() || !selectedConv) return;
 
     try {
@@ -129,7 +155,6 @@ export default function ActiveConversations() {
       });
       const msg = await res.json();
       
-      // Update local state + Cache immediately so UI is extremely fast
       const updatedMessages = [...messages, msg];
       setMessages(updatedMessages);
       
@@ -138,13 +163,28 @@ export default function ActiveConversations() {
 
       setInputText('');
 
-      // Also clear the conversations list cache since the last message changed
       const convsKey = `${apiUrl}/messages/conversations_GET_""`;
       apiCache.clear(convsKey);
       fetchConversations();
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendMessage();
+  };
+
+  const handleInputKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      await sendMessage();
+    }
+  };
+
+  const handleInputFocus = () => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   };
 
   const filteredConvs = conversations.filter(c => 
@@ -154,16 +194,16 @@ export default function ActiveConversations() {
   // Mobile: show list or chat, not both
   if (selectedConv) {
     return (
-      <div className="flex flex-col h-[calc(100vh-210px)] max-h-[calc(100vh-210px)] animate-in fade-in duration-300">
+      <div className="max-md:fixed max-md:inset-0 max-md:z-[150] max-md:bg-bg-base max-md:flex max-md:flex-col md:flex md:flex-col md:h-[calc(100vh-210px)] md:max-h-[calc(100vh-210px)] animate-in fade-in duration-300">
         {/* Chat Header */}
-        <div className="flex items-center gap-3 pb-4 border-b border-border-subtle">
+        <div className="flex items-center gap-3 pb-4 border-b border-border-subtle max-md:pt-[calc(12px+env(safe-area-inset-top,20px))] max-md:px-4 max-md:pb-3 max-md:bg-surface-card max-md:shadow-sm">
           <button 
             onClick={() => setSelectedConv(null)} 
             className="p-2 rounded-xl bg-surface-hover text-text-secondary hover:bg-surface-hover/80 transition-all"
           >
             <ChevronLeft size={18} />
           </button>
-          <div className="w-10 h-10 rounded-full bg-primary-subtle text-primary-main flex items-center justify-center text-xs font-bold">
+          <div className="w-10 h-10 rounded-full bg-primary-subtle text-primary-main flex items-center justify-center text-xs font-bold shrink-0">
             {selectedConv.profiles?.full_name?.substring(0, 2).toUpperCase() || 'U'}
           </div>
           <div className="flex-1 min-w-0">
@@ -177,7 +217,7 @@ export default function ActiveConversations() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-3 no-scrollbar">
+        <div className="flex-1 overflow-y-auto py-4 space-y-3 no-scrollbar max-md:px-4 max-md:bg-bg-base">
           {messages.length === 0 && (
             <div className="text-center py-12">
               <MessageSquare size={24} className="mx-auto text-text-muted/30 mb-2" />
@@ -211,11 +251,16 @@ export default function ActiveConversations() {
         </div>
 
         {/* Input */}
-        <div className="pt-3 border-t border-border-subtle">
+        <div className="pt-3 border-t border-border-subtle max-md:px-4 max-md:pb-[calc(12px+env(safe-area-inset-bottom,16px))] max-md:bg-surface-card max-md:pt-3">
           <form onSubmit={handleSend} className="relative">
             <input
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleInputKeyDown}
+              onFocus={handleInputFocus}
+              autoFocus
+              inputMode="text"
+              aria-label="Type a message"
               placeholder="Type a message..."
               className="w-full bg-surface-card border border-border-subtle rounded-2xl py-3.5 pl-4 pr-14 text-sm font-medium text-text-main focus:outline-none focus:border-primary-main transition-all placeholder:text-text-muted"
             />
