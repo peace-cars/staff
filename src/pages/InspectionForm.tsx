@@ -21,6 +21,45 @@ interface InspectionPoint {
   photo?: string;
 }
 
+const compressAndGetBase64 = (file: File, maxWidth = 1280, quality = 0.8): Promise<{ base64: string, dataUrl: string }> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const result = event.target?.result;
+      if (typeof result !== 'string') {
+        reject(new Error("Failed to read file"));
+        return;
+      }
+      const img = new Image();
+      img.src = result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scaleSize = maxWidth / img.width;
+        let width = img.width;
+        let height = img.height;
+        if (scaleSize < 1) {
+          width = maxWidth;
+          height = img.height * scaleSize;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          const base64 = dataUrl.split(',')[1];
+          resolve({ base64, dataUrl });
+        } else {
+          reject(new Error("Canvas context creation failed"));
+        }
+      };
+      img.onerror = () => reject(new Error("Image loading failed"));
+    };
+    reader.onerror = () => reject(new Error("File reading failed"));
+  });
+};
+
 export default function InspectionForm() {
   const { leadId } = useParams();
   const navigate = useNavigate();
@@ -116,6 +155,181 @@ export default function InspectionForm() {
   const [fetchError, setFetchError] = useState('');
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // Phase 4: Offline Caching & Sync States
+  const [restoredDraft, setRestoredDraft] = useState(false);
+  const [hasLoadedDraft, setHasLoadedDraft] = useState(false);
+  const [syncingQueue, setSyncingQueue] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    if (!leadId) {
+      setHasLoadedDraft(true);
+      return;
+    }
+    const draftKey = `inspection_draft_${leadId}`;
+    try {
+      const saved = localStorage.getItem(draftKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.checklist) setChecklist(parsed.checklist);
+        if (parsed.evData) setEvData(parsed.evData);
+        if (parsed.finalNotes) setFinalNotes(parsed.finalNotes);
+        if (parsed.scores) setScores(parsed.scores);
+        if (parsed.scoreOverrides) setScoreOverrides(parsed.scoreOverrides);
+        
+        setRestoredDraft(true);
+        setTimeout(() => setRestoredDraft(false), 5000);
+      }
+    } catch (e) {
+      console.error('Failed to load local draft:', e);
+    } finally {
+      setHasLoadedDraft(true);
+    }
+  }, [leadId]);
+
+  // Auto-save draft to localStorage on any state changes
+  useEffect(() => {
+    if (!leadId || !hasLoadedDraft) return;
+    const draftKey = `inspection_draft_${leadId}`;
+    const draftData = {
+      checklist,
+      evData,
+      finalNotes,
+      scores,
+      scoreOverrides
+    };
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(draftData));
+    } catch (e) {
+      console.error('Failed to auto-save draft:', e);
+    }
+  }, [checklist, evData, finalNotes, scores, scoreOverrides, leadId, hasLoadedDraft]);
+
+  // Background Sync Runner
+  const runBackgroundSync = useCallback(async () => {
+    if (!navigator.onLine || syncingQueue) return;
+    const queueKey = 'peace_sync_queue';
+    const rawQueue = localStorage.getItem(queueKey);
+    if (!rawQueue) return;
+
+    try {
+      const queue = JSON.parse(rawQueue);
+      if (queue.length === 0) return;
+
+      setSyncingQueue(true);
+      setSyncStatus(`Syncing ${queue.length} offline report(s)...`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+      const remainingQueue = [];
+
+      for (const item of queue) {
+        try {
+          const authHeader = { 'Authorization': `Bearer ${item.token}` };
+          
+          // 1. Upload base64 photos in checklist if any
+          const payload = item.payload;
+          const updatedChecklist = { ...payload.checklist };
+
+          for (const category of Object.keys(updatedChecklist)) {
+            const points = updatedChecklist[category];
+            for (let i = 0; i < points.length; i++) {
+              const point = points[i];
+              if (point.photo && point.photo.startsWith('data:image/')) {
+                const base64 = point.photo.split(',')[1];
+                const uploadRes = await fetch(`${apiUrl}/storage/upload-base64`, {
+                  method: 'POST',
+                  headers: { ...authHeader, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    base64: base64,
+                    filename: `inspections-${category}-${point.id}-${Date.now()}.jpg`,
+                    folder: `inspections/${item.leadId}`,
+                    bucket: 'vehicles'
+                  })
+                });
+                if (uploadRes.ok) {
+                  const { url } = await uploadRes.json();
+                  updatedChecklist[category][i] = { ...point, photo: url };
+                } else {
+                  throw new Error(`Failed to upload photo for ${point.label}`);
+                }
+              }
+            }
+          }
+
+          // 2. Submit the inspection
+          const res = await fetch(`${apiUrl}/trade-in-requests/inspection`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              ...authHeader
+            },
+            body: JSON.stringify({
+              leadId: payload.leadId,
+              mechanical_score: payload.mechanical_score,
+              exterior_score: payload.exterior_score,
+              interior_score: payload.interior_score,
+              checklist: updatedChecklist,
+              ev_data: payload.ev_data,
+              final_notes: payload.final_notes
+            })
+          });
+
+          if (!res.ok) throw new Error(`Inspection submission failed: ${res.status}`);
+
+          // 3. Handle Auto-Approve if specified
+          if (payload.statusOverride === 'approved') {
+            const approveRes = await fetch(`${apiUrl}/trade-in-requests/${item.leadId}/approve`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                ...authHeader
+              },
+              body: JSON.stringify({
+                offerPrice: 10000,
+                notes: 'Auto-approved by District Manager during offline inspection background sync.'
+              })
+            });
+            if (!approveRes.ok) throw new Error(`Instant acquisition failed`);
+          }
+
+        } catch (err: any) {
+          console.error(`Failed to sync item ${item.leadId}:`, err);
+          remainingQueue.push(item);
+        }
+      }
+
+      localStorage.setItem(queueKey, JSON.stringify(remainingQueue));
+      
+      const syncedCount = queue.length - remainingQueue.length;
+      if (syncedCount > 0) {
+        setSyncStatus(`Successfully synced ${syncedCount} offline report(s)!`);
+        setTimeout(() => setSyncStatus(null), 5000);
+      } else {
+        setSyncStatus(null);
+      }
+    } catch (e) {
+      console.error('Error during background sync runner:', e);
+      setSyncStatus(null);
+    } finally {
+      setSyncingQueue(false);
+    }
+  }, [syncingQueue]);
+
+  // Hook background sync to network state and mount
+  useEffect(() => {
+    runBackgroundSync();
+
+    const handleOnline = () => {
+      runBackgroundSync();
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [runBackgroundSync]);
+
   useEffect(() => {
     if (!session) return;
     
@@ -164,23 +378,25 @@ export default function InspectionForm() {
     setUploadingPointId(pointId);
     setUploadError(null);
     try {
+      const { base64, dataUrl } = await compressAndGetBase64(file);
+
+      if (!navigator.onLine) {
+        // Offline Mode: store the compressed base64 data URI directly in the checklist point!
+        updatePoint(category, pointId, { photo: dataUrl });
+        setUploadError("Offline! Photo saved locally. It will upload when you submit/sync.");
+        setTimeout(() => setUploadError(null), 4000);
+        return;
+      }
+
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const authHeader = { 'Authorization': `Bearer ${session.access_token}` };
-
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1]); // strip data: prefix
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
 
       const res = await fetch(`${apiUrl}/storage/upload-base64`, {
         method: 'POST',
         headers: { ...authHeader, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          base64Data: base64, // Wait, backend endpoint expects 'base64', not 'base64Data'
           base64: base64,
-          filename: file.name || 'image.jpg',
+          filename: file.name ? file.name.replace(/\.[^/.]+$/, '.jpg') : 'image.jpg',
           folder: `inspections/${leadId}`,
           bucket: 'vehicles'
         })
@@ -200,8 +416,94 @@ export default function InspectionForm() {
   const handleSubmit = async (statusOverride?: string) => {
     if (!session) return;
     setIsSubmitting(true);
+    
+    const payload = {
+      leadId,
+      mechanical_score: scores.mechanical,
+      exterior_score: scores.exterior,
+      interior_score: scores.interior,
+      checklist,
+      ev_data: evData,
+      final_notes: finalNotes,
+      statusOverride
+    };
+
+    if (!navigator.onLine) {
+      // Offline: Add to sync queue!
+      try {
+        const queueKey = 'peace_sync_queue';
+        const rawQueue = localStorage.getItem(queueKey) || '[]';
+        const queue = JSON.parse(rawQueue);
+        
+        // Remove any existing queued items for this lead to avoid duplicates
+        const updatedQueue = queue.filter((item: any) => item.leadId !== leadId);
+        
+        updatedQueue.push({
+          id: `${leadId}_${Date.now()}`,
+          leadId,
+          payload,
+          timestamp: Date.now(),
+          token: session.access_token,
+          vehicleName: lead?.vehicle || 'Vehicle'
+        });
+        
+        localStorage.setItem(queueKey, JSON.stringify(updatedQueue));
+        
+        // Clear local draft cache
+        localStorage.removeItem(`inspection_draft_${leadId}`);
+
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#6366f1', '#f59e0b', '#10b981']
+        });
+
+        alert('Offline Mode! Evaluation saved to outbound Sync Queue. It will upload automatically when connection is restored.');
+        setTimeout(() => navigate('/'), 2000);
+      } catch (err) {
+        console.error('Failed to queue offline inspection:', err);
+        alert('Failed to save inspection locally. Storage full?');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // Online: Submit directly!
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests/inspection`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const authHeader = { 'Authorization': `Bearer ${session.access_token}` };
+
+      // Upload base64 photos in checklist first if any exist
+      const updatedChecklist = { ...checklist };
+      for (const category of Object.keys(updatedChecklist)) {
+        const points = updatedChecklist[category];
+        for (let i = 0; i < points.length; i++) {
+          const point = points[i];
+          if (point.photo && point.photo.startsWith('data:image/')) {
+            const base64 = point.photo.split(',')[1];
+            const uploadRes = await fetch(`${apiUrl}/storage/upload-base64`, {
+              method: 'POST',
+              headers: { ...authHeader, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                base64: base64,
+                filename: `inspections-${category}-${point.id}-${Date.now()}.jpg`,
+                folder: `inspections/${leadId}`,
+                bucket: 'vehicles'
+              })
+            });
+            if (uploadRes.ok) {
+              const { url } = await uploadRes.json();
+              updatedChecklist[category][i] = { ...point, photo: url };
+            } else {
+              throw new Error(`Failed to upload local photo for ${point.label}`);
+            }
+          }
+        }
+      }
+
+      const res = await fetch(`${apiUrl}/trade-in-requests/inspection`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -212,7 +514,7 @@ export default function InspectionForm() {
           mechanical_score: scores.mechanical,
           exterior_score: scores.exterior,
           interior_score: scores.interior,
-          checklist,
+          checklist: updatedChecklist,
           ev_data: evData,
           final_notes: finalNotes
         })
@@ -225,6 +527,29 @@ export default function InspectionForm() {
         return;
       }
 
+      // Handle Instant Acquisition
+      if (statusOverride === 'approved') {
+        const approveRes = await fetch(`${apiUrl}/trade-in-requests/${leadId}/approve`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            offerPrice: lead.user_asking_price_etb || 10000,
+            notes: 'Auto-approved by District Manager during inspection.'
+          })
+        });
+        if (!approveRes.ok) {
+          const appResult = await approveRes.json();
+          alert('Inspection submitted, but instant acquisition failed: ' + (appResult.message || ''));
+          return;
+        }
+      }
+
+      // Clear local draft cache
+      localStorage.removeItem(`inspection_draft_${leadId}`);
+
       confetti({
         particleCount: 150,
         spread: 70,
@@ -234,9 +559,9 @@ export default function InspectionForm() {
 
       alert('Evaluation submitted successfully. Syncing with registry...');
       setTimeout(() => navigate('/'), 2000);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Network Error');
+      alert('Submission error: ' + (e.message || 'Network Error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -387,6 +712,29 @@ export default function InspectionForm() {
         </div>
       )}
 
+      {/* Restored Draft Notice */}
+      {restoredDraft && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-indigo-600 text-white text-[12px] font-bold px-4 py-3 rounded-2xl shadow-lg border border-indigo-500/50 flex items-center gap-2 max-w-sm w-[90%] justify-between animate-in fade-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="shrink-0" />
+            <span>Resumed from local offline draft.</span>
+          </div>
+          <button onClick={() => setRestoredDraft(false)} className="p-1 hover:bg-white/10 rounded-lg transition-colors shrink-0">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Sync Status Toast */}
+      {syncStatus && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white text-[12px] font-bold px-4 py-3 rounded-2xl shadow-lg border border-slate-700 flex items-center gap-2 max-w-sm w-[90%] justify-between animate-in fade-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-2">
+            <Loader2 size={16} className="shrink-0 animate-spin text-indigo-400" />
+            <span>{syncStatus}</span>
+          </div>
+        </div>
+      )}
+
       {/* Dynamic Mobile Header */}
       <header className="sticky top-0 bg-surface-card/90 backdrop-blur-xl border-b border-border-subtle z-50 px-5 py-4 flex items-center gap-3 shadow-md">
         <button onClick={() => navigate('/')} className="p-2 rounded-xl bg-surface-hover text-text-secondary hover:bg-surface-hover/80 transition-all">
@@ -395,8 +743,10 @@ export default function InspectionForm() {
         <div className="flex-1">
           <h1 className="text-[11px] font-black text-text-main uppercase tracking-[0.1em]">{lead.vehicle}</h1>
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <p className="text-text-secondary text-[8px] font-bold uppercase tracking-widest">Live Appraisal • {lead.location}</p>
+            <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", navigator.onLine ? "bg-emerald-500" : "bg-amber-500")} />
+            <p className="text-text-secondary text-[8px] font-bold uppercase tracking-widest">
+              {navigator.onLine ? 'Live Appraisal' : 'Offline Draft Mode'} • {lead.location}
+            </p>
           </div>
         </div>
       </header>
