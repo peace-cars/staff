@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './lib/auth';
 import { ThemeProvider } from './lib/ThemeContext';
 import { AppShell } from './components/ui/AppShell';
 import { AnimatePresence } from 'framer-motion';
+import { ScrollToTop } from './components/ui/ScrollToTop';
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -14,12 +15,13 @@ import Splash from './components/ui/Splash';
 import { ApplePageTransition } from './components/ui/ApplePageTransition';
 import { initializePushNotifications } from './lib/push';
 import { CapacitorBackButtonHandler } from './components/ui/CapacitorBackButtonHandler';
+import { Capacitor } from '@capacitor/core';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (session?.user?.id && Capacitor.isNativePlatform()) {
       initializePushNotifications(session.user.id);
     }
   }, [session]);
@@ -57,6 +59,7 @@ export default function App() {
 
           {!showSplash && (
             <Router>
+              <ScrollToTop />
               <CapacitorBackButtonHandler />
               <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-bg-base text-text-muted">Loading page…</div>}>
                 <Routes>
