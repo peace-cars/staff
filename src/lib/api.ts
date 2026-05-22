@@ -79,7 +79,7 @@ export async function apiFetch<T>(endpoint: string, options: any = {}): Promise<
       if (response.status >= 400) {
         throw new Error(response.data?.message || `API Error ${response.status}`);
       }
-      return response.data;
+      return unwrapApiResponse(response.data);
     }
 
     // Fallback for Web/PWA
@@ -88,7 +88,8 @@ export async function apiFetch<T>(endpoint: string, options: any = {}): Promise<
       const error = await response.json().catch(() => ({ message: 'API request failed' }));
       throw new Error(error.message || 'API request failed');
     }
-    return response.json();
+    const payload = await response.json();
+    return unwrapApiResponse(payload);
   };
 
   try {
@@ -124,3 +125,10 @@ export const api = {
   delete: <T>(endpoint: string, options?: RequestInit) => 
     apiFetch<T>(endpoint, { ...options, method: 'DELETE' }),
 };
+
+export function unwrapApiResponse(payload: any): any {
+  if (payload && typeof payload === 'object' && 'success' in payload) {
+    return payload.data;
+  }
+  return payload;
+}

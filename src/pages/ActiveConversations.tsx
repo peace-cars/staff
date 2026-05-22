@@ -6,6 +6,7 @@ import {
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { fetchWithCache, apiCache } from '../lib/cache';
+import { unwrapApiResponse } from '../lib/api';
 
 export default function ActiveConversations() {
   const { session } = useAuth();
@@ -153,7 +154,7 @@ export default function ActiveConversations() {
           text: inputText
         })
       });
-      const msg = await res.json();
+      const msg = unwrapApiResponse(await res.json());
       
       const updatedMessages = [...messages, msg];
       setMessages(updatedMessages);

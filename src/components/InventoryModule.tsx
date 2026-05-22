@@ -9,6 +9,7 @@ import { useAuth } from '../lib/auth';
 import { cn } from '../lib/utils';
 import ImageUpload from './ImageUpload';
 import { fetchWithCache } from '../lib/cache';
+import { unwrapApiResponse } from '../lib/api';
 
 export default function InventoryModule() {
   const { session } = useAuth();
@@ -47,7 +48,7 @@ export default function InventoryModule() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!session || !session.profile?.location_id) {
+    if (!session || !session.profile?.branch_id) {
       alert('Branch context missing. Contact administrator.');
       return;
     }
@@ -55,7 +56,7 @@ export default function InventoryModule() {
     try {
       const payload = {
         ...formData,
-        branchId: session.profile.location_id // Automated scoping injection
+        branchId: session.profile.branch_id // Automated scoping injection
       };
 
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/vehicles`, {
@@ -76,8 +77,8 @@ export default function InventoryModule() {
           vin: '', plate: '', gallery: [], internalDocuments: []
         });
       } else {
-        const error = await res.json();
-        alert(error.message || 'Failed to create listing');
+        const error = unwrapApiResponse(await res.json());
+        alert(error?.message || 'Failed to create listing');
       }
     } catch (err) {
       console.error('Network Error', err);

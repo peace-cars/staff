@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MessageSquare, ChevronRight, Clock, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/Button';
+import { unwrapApiResponse } from '../lib/api';
 
 export default function NegotiationWidget() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function NegotiationWidget() {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/messages/recent`, {
         headers: { 'Authorization': `Bearer ${access_token}` }
       });
-      const data = await res.json();
+      const data = unwrapApiResponse(await res.json());
       setRecent(Array.isArray(data) ? data.slice(0, 3) : []);
     } catch (e) {
       console.error('Failed to fetch recent negotiations', e);

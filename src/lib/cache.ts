@@ -1,4 +1,5 @@
 const CACHE_PREFIX = 'peace_staff_cache_';
+import { unwrapApiResponse } from './api';
 const CACHE_TTL_24H = 24 * 60 * 60 * 1000; // 24 hours — persistent offline cache
 const CACHE_TTL_DEFAULT = 30 * 1000; // 30s in-memory default
 
@@ -111,7 +112,7 @@ export async function fetchWithCache(
       if (res.status === 401) throw Object.assign(new Error('Unauthorized'), { status: 401 });
       throw new Error(`Fetch failed with status ${res.status}`);
     }
-    const freshData = await res.json();
+    const freshData = unwrapApiResponse(await res.json());
 
     // 3. Only update UI if data actually changed (prevents unnecessary re-renders)
     const cachedStr = cached ? JSON.stringify(cached) : null;

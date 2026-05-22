@@ -26,7 +26,7 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
   const initialSyncState = (() => {
     if (!session) return true;
     const perfCached = apiCache.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-performance/me_GET_""`);
-    const leadsCached = apiCache.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests_GET_""`);
+    const leadsCached = apiCache.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests/me_GET_""`);
     return !(perfCached && leadsCached);
   })();
 
@@ -66,7 +66,7 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
       completeSync();
     });
 
-    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests`, { headers }, (data) => {
+    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests/me`, { headers }, (data) => {
       setLeads(Array.isArray(data) ? data : []);
       loadedLeads = true;
       completeSync();

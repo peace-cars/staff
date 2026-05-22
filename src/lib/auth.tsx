@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import { unwrapApiResponse } from './api';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -17,7 +18,7 @@ interface UserProfile {
   role: string;
   full_name: string;
   phone_number: string | null;
-  location_id: string | null;
+  branch_id: string | null;
   is_verified: boolean;
   is_inspector_verified: boolean;
   gamification_points: number;
@@ -170,10 +171,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const data = unwrapApiResponse(await res.json());
 
       if (!res.ok) {
-        return { error: data.message || 'Login failed' };
+        return { error: data?.message || 'Login failed' };
       }
 
       // Verify staff role - allow any staff-tier role
@@ -215,9 +216,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ email, password, fullName, phoneNumber: phone, role: 'STAFF' }),
       });
 
-      const data = await res.json();
+      const data = unwrapApiResponse(await res.json());
       if (!res.ok) {
-        return { error: data.message || 'Signup failed' };
+        return { error: data?.message || 'Signup failed' };
       }
 
       // Successful signup triggers auth directly
