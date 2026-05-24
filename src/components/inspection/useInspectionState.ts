@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { unwrapApiResponse } from '../../lib/api';
 import confetti from 'canvas-confetti';
+import localforage from 'localforage';
 
 export interface InspectionPoint {
   id: string;
@@ -147,10 +148,9 @@ export function useInspectionState(leadId: string | undefined) {
       return;
     }
     const draftKey = `inspection_draft_${leadId}`;
-    try {
-      const saved = localStorage.getItem(draftKey);
+    localforage.getItem(draftKey).then((saved: any) => {
       if (saved) {
-        const parsed = JSON.parse(saved);
+        const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
         if (parsed.checklist) setChecklist(parsed.checklist);
         if (parsed.evData) setEvData(parsed.evData);
         if (parsed.finalNotes) setFinalNotes(parsed.finalNotes);
@@ -159,31 +159,30 @@ export function useInspectionState(leadId: string | undefined) {
         setRestoredDraft(true);
         setTimeout(() => setRestoredDraft(false), 5000);
       }
-    } catch (e) {
+    }).catch(e => {
       console.error('Failed to load local draft:', e);
-    } finally {
+    }).finally(() => {
       setHasLoadedDraft(true);
-    }
+    });
   }, [leadId]);
 
   useEffect(() => {
     if (!leadId || !hasLoadedDraft) return;
     const draftKey = `inspection_draft_${leadId}`;
-    try {
-      localStorage.setItem(draftKey, JSON.stringify({ checklist, evData, finalNotes, scores, scoreOverrides }));
-    } catch (e) {
+    localforage.setItem(draftKey, { checklist, evData, finalNotes, scores, scoreOverrides }).catch(e => {
       console.error('Failed to auto-save draft:', e);
-    }
+    });
   }, [checklist, evData, finalNotes, scores, scoreOverrides, leadId, hasLoadedDraft]);
 
   const runBackgroundSync = useCallback(async () => {
     if (!navigator.onLine || syncingQueue) return;
+    if (!session || !session.access_token) return; // Wait for valid session
     const queueKey = 'peace_sync_queue';
-    const rawQueue = localStorage.getItem(queueKey);
-    if (!rawQueue) return;
-
+    
     try {
-      const queue = JSON.parse(rawQueue);
+      const rawQueue = await localforage.getItem(queueKey) as any[];
+      if (!rawQueue || (Array.isArray(rawQueue) && rawQueue.length === 0)) return;
+      const queue = typeof rawQueue === 'string' ? JSON.parse(rawQueue) : rawQueue;
       if (queue.length === 0) return;
 
       setSyncingQueue(true);
@@ -194,7 +193,7 @@ export function useInspectionState(leadId: string | undefined) {
 
       for (const item of queue) {
         try {
-          const authHeader = { 'Authorization': `Bearer ${item.token}` };
+          const authHeader = { 'Authorization': `Bearer ${session.access_token}` };
           const payload = item.payload;
           const updatedChecklist = { ...payload.checklist };
 
@@ -258,7 +257,7 @@ export function useInspectionState(leadId: string | undefined) {
         }
       }
 
-      localStorage.setItem(queueKey, JSON.stringify(remainingQueue));
+      await localforage.setItem(queueKey, remainingQueue);
       
       const syncedCount = queue.length - remainingQueue.length;
       if (syncedCount > 0) {
@@ -273,7 +272,7 @@ export function useInspectionState(leadId: string | undefined) {
     } finally {
       setSyncingQueue(false);
     }
-  }, [syncingQueue]);
+  }, [syncingQueue, session]);
 
   useEffect(() => {
     runBackgroundSync();
@@ -337,8 +336,8 @@ export function useInspectionState(leadId: string | undefined) {
     if (!navigator.onLine) {
       try {
         const queueKey = 'peace_sync_queue';
-        const rawQueue = localStorage.getItem(queueKey) || '[]';
-        const queue = JSON.parse(rawQueue);
+        const rawQueue = await localforage.getItem(queueKey) as any[];
+        const queue = (typeof rawQueue === 'string' ? JSON.parse(rawQueue) : rawQueue) || [];
         const updatedQueue = queue.filter((item: any) => item.leadId !== leadId);
         
         updatedQueue.push({
@@ -346,12 +345,11 @@ export function useInspectionState(leadId: string | undefined) {
           leadId,
           payload,
           timestamp: Date.now(),
-          token: session.access_token,
           vehicleName: lead?.vehicle || 'Vehicle'
         });
         
-        localStorage.setItem(queueKey, JSON.stringify(updatedQueue));
-        localStorage.removeItem(`inspection_draft_${leadId}`);
+        await localforage.setItem(queueKey, updatedQueue);
+        await localforage.removeItem(`inspection_draft_${leadId}`);
 
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#6366f1', '#f59e0b', '#10b981'] });
         alert('Offline Mode! Evaluation saved to outbound Sync Queue. It will upload automatically when connection is restored.');
@@ -432,7 +430,7 @@ export function useInspectionState(leadId: string | undefined) {
         }
       }
 
-      localStorage.removeItem(`inspection_draft_${leadId}`);
+      await localforage.removeItem(`inspection_draft_${leadId}`);
       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#6366f1', '#f59e0b', '#10b981'] });
       alert('Evaluation submitted successfully. Syncing with registry...');
       setTimeout(() => navigate('/'), 2000);

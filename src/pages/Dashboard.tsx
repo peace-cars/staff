@@ -120,7 +120,7 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
          </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {displayLeads.length === 0 ? (
           <div className="py-24 text-center border-2 border-dashed border-border-subtle rounded-3xl bg-surface-card">
             <Activity size={32} className="mx-auto text-text-muted/30 mb-4" />
