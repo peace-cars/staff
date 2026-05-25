@@ -92,9 +92,10 @@ const compressImage = (file: File, maxWidth = 1280): Promise<File> => {
           throw new Error("Please sign in to upload files.");
         }
 
+        const arrayBuffer = await file.arrayBuffer();
         const { error: uploadError } = await supabase.storage
           .from(bucket)
-          .upload(filePath, file);
+          .upload(filePath, arrayBuffer, { contentType: file.type || 'image/webp' });
 
         if (uploadError) throw uploadError;
 

@@ -6,9 +6,10 @@ interface InspectionVehicleCardProps {
   leadId: string | undefined;
   lead: any;
   setSelectedGalleryPhoto: (photo: string | null) => void;
+  commRate?: number;
 }
 
-export function InspectionVehicleCard({ leadId, lead, setSelectedGalleryPhoto }: InspectionVehicleCardProps) {
+export function InspectionVehicleCard({ leadId, lead, setSelectedGalleryPhoto, commRate = 0.01 }: InspectionVehicleCardProps) {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
   if (!lead) return null;
@@ -85,9 +86,15 @@ export function InspectionVehicleCard({ leadId, lead, setSelectedGalleryPhoto }:
             <p className="text-text-secondary text-[9px] font-bold uppercase tracking-widest mb-0.5">Asset Registry</p>
             <h2 className="text-2xl font-black text-text-main tracking-tight leading-none">{lead.vehicle}</h2>
           </div>
-          <div className="sm:text-right">
-            <p className="text-text-secondary text-[9px] font-bold uppercase tracking-widest mb-0.5">Asking Price</p>
-            <p className="text-2xl font-black text-primary-main tracking-tight">{lead.user_asking_price_etb?.toLocaleString()} <span className="text-[10px] font-bold">ETB</span></p>
+          <div className="sm:text-right space-y-2">
+            <div>
+              <p className="text-text-secondary text-[9px] font-bold uppercase tracking-widest mb-0.5">Asking Price</p>
+              <p className="text-2xl font-black text-primary-main tracking-tight">{lead.user_asking_price_etb?.toLocaleString()} <span className="text-[10px] font-bold">ETB</span></p>
+            </div>
+            <div>
+              <p className="text-text-secondary text-[9px] font-bold uppercase tracking-widest mb-0.5">Commission ({(commRate * 100).toFixed(1)}%)</p>
+              <p className="text-lg font-black text-success-main tracking-tight">{Math.round((lead.user_asking_price_etb || 0) * commRate).toLocaleString()} <span className="text-[10px] font-bold">ETB</span></p>
+            </div>
           </div>
         </div>
 
@@ -111,6 +118,34 @@ export function InspectionVehicleCard({ leadId, lead, setSelectedGalleryPhoto }:
             </div>
           </div>
         </div>
+        
+        <div className="mt-4 pt-4 border-t border-border-subtle">
+          <p className="text-text-secondary text-[9px] font-bold uppercase tracking-widest mb-3">Core Identifiers</p>
+          <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
+            <div className="bg-surface-hover p-2.5 rounded-xl border border-border-subtle/30">
+              <p className="text-[8px] font-bold text-text-secondary uppercase tracking-widest mb-0.5">License Plate / Desc</p>
+              <p className="text-xs font-bold text-text-main truncate" title={lead.plate}>{lead.plate || 'N/A'}</p>
+            </div>
+            <div className="bg-surface-hover p-2.5 rounded-xl border border-border-subtle/30">
+              <p className="text-[8px] font-bold text-text-secondary uppercase tracking-widest mb-0.5">Branch Location</p>
+              <p className="text-xs font-bold text-text-main truncate" title={lead.location}>{lead.location || 'Local'}</p>
+            </div>
+          </div>
+        </div>
+
+        {lead.vehicleDetails && Object.keys(lead.vehicleDetails).length > 0 && (
+          <div className="mt-4 pt-4 border-t border-border-subtle">
+            <p className="text-text-secondary text-[9px] font-bold uppercase tracking-widest mb-3">Vehicle Details</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {Object.entries(lead.vehicleDetails).map(([key, value]) => (
+                <div key={key} className="bg-surface-hover p-2.5 rounded-xl border border-border-subtle/30">
+                  <p className="text-[8px] font-bold text-text-secondary uppercase tracking-widest mb-0.5">{key.replace(/_/g, ' ')}</p>
+                  <p className="text-xs font-bold text-text-main truncate" title={String(value)}>{String(value)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

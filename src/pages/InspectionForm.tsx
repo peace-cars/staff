@@ -109,7 +109,7 @@ export default function InspectionForm() {
       <main className="flex-1 p-4 md:p-8 w-full max-w-7xl mx-auto space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-7 space-y-6">
-            <InspectionVehicleCard leadId={leadId} lead={lead} setSelectedGalleryPhoto={setSelectedGalleryPhoto} />
+            <InspectionVehicleCard leadId={leadId} lead={lead} setSelectedGalleryPhoto={setSelectedGalleryPhoto} commRate={commRate} />
           </div>
           <InspectionCategories lead={lead} commRate={commRate} scores={scores} checklist={checklist} setActiveSheet={setActiveSheet} />
         </div>
