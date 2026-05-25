@@ -25,7 +25,10 @@ export default function InspectionForm() {
     updatePoint, handleSubmit
   } = useInspectionState(leadId);
 
-  if (!profile && !fetchError) return (
+  // Wait for both profile and lead to load (or a fetchError to be set) before rendering.
+  // Previously only gated on !profile, causing a "Registry Lock" flash if profile arrived
+  // before the lead fetch completed.
+  if ((!profile || !lead) && !fetchError) return (
     <div className="min-h-screen bg-bg-base flex items-center justify-center gap-3">
       <div className="w-5 h-5 border-2 border-primary-main/10 border-t-primary-main rounded-full animate-spin" />
       <span className="text-text-muted font-bold uppercase tracking-widest text-[9px]">Synchronizing...</span>
@@ -43,14 +46,16 @@ export default function InspectionForm() {
     );
   }
 
-  // @ts-ignore session is fetched inside useInspectionState, but we just check lead matching here.
-  const isAssigned = lead?.assigned_staff_id === profile?.id; // Actually we might need session.user.id but profile.id is same
-  if (!lead || (!profile?.is_inspector_verified && !isDM && !isAssigned)) {
+  // Backend authorization is the source of truth: if the request for the lead succeeded
+  // (no fetchError), the server already verified access via canAccessTradeIn().
+  // Staff can access leads via direct assignment (assigned_staff_id) OR branch-level scope.
+  // A redundant frontend-only check here was causing false "Registry Lock" for branch-scoped staff.
+  if (!lead) {
     return (
       <div className="min-h-screen bg-bg-base flex flex-col items-center justify-center p-6 text-center">
         <ShieldAlert size={48} className="text-red-500 mb-4" />
         <h1 className="text-xl font-bold text-text-main mb-2">Registry Lock</h1>
-        <p className="text-text-secondary text-sm mb-6">Unauthorized access detected. You are not assigned to this vehicle evaluation.</p>
+        <p className="text-text-secondary text-sm mb-6">Vehicle evaluation data could not be loaded. Please try again or contact your branch manager.</p>
         <button onClick={() => navigate('/')} className="bg-surface-hover text-text-secondary px-6 py-3 rounded-xl font-bold text-sm border border-border-subtle hover:bg-surface-hover/80 transition-all">Back</button>
       </div>
     );
