@@ -11,6 +11,8 @@ import { ModernLeadCard } from '../components/ui/ModernLeadCard';
 import NegotiationWidget from '../components/NegotiationWidget';
 import { cn } from '../lib/utils';
 import { fetchWithCache, apiCache } from '../lib/cache';
+import { InspectionReportView } from '../components/ui/InspectionReportView';
+import { SkeletonCard } from '../components/ui/Skeleton';
 
 interface DashboardProps {
   activeTab?: 'leads' | 'tasks' | 'budget' | 'performance' | 'team' | 'inventory';
@@ -79,9 +81,21 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
   }, [session]);
 
   if (isSyncing) return (
-    <div className="flex flex-col items-center justify-center py-40 gap-6">
-       <div className="w-12 h-12 border-4 border-primary-main/20 border-t-primary-main rounded-full animate-spin" />
-       <p className="text-sm font-bold text-text-muted uppercase tracking-wider">Synchronizing data...</p>
+    <div className="space-y-8 pb-12 pt-6">
+      <div className="flex flex-col gap-1">
+         <div className="h-8 w-48 rounded bg-border-subtle/40 animate-pulse" />
+         <div className="h-4 w-64 rounded bg-border-subtle/40 animate-pulse mt-2" />
+      </div>
+      <div className="flex gap-2">
+         <div className="h-10 w-24 rounded-lg bg-border-subtle/40 animate-pulse" />
+         <div className="h-10 w-24 rounded-lg bg-border-subtle/40 animate-pulse" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
     </div>
   );
 
@@ -120,7 +134,7 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
          </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {displayLeads.length === 0 ? (
           <div className="py-24 text-center border-2 border-dashed border-border-subtle rounded-3xl bg-surface-card">
             <Activity size={32} className="mx-auto text-text-muted/30 mb-4" />
@@ -130,7 +144,13 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
           <ModernLeadCard 
             key={lead.id} 
             lead={lead} 
-            onClick={() => navigate(`/eval/${lead.id}`)}
+            onClick={() => {
+              if (leadTab === 'COMPLETED') {
+                setSelectedCompletedLead(lead);
+              } else {
+                navigate(`/eval/${lead.id}`);
+              }
+            }}
           />
         ))}
       </div>
@@ -139,6 +159,8 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
 
 
 
+  const [selectedCompletedLead, setSelectedCompletedLead] = useState<any>(null);
+
   return (
     <div className="pb-24">
       {activeTab === 'leads' && renderLeads()}
@@ -146,6 +168,13 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
       {activeTab === 'budget' && <BudgetRequests />}
       {(activeTab === 'team' && (profile?.role === 'DISTRICT_MANAGER' || profile?.role === 'GENERAL_MANAGER')) && <TeamManager />}
       {(activeTab === 'inventory' && (profile?.role === 'DISTRICT_MANAGER' || profile?.role === 'GENERAL_MANAGER')) && <InventoryModule />}
+      
+      {/* Inspection Report View for Completed Leads */}
+      <InspectionReportView 
+        isOpen={!!selectedCompletedLead}
+        onClose={() => setSelectedCompletedLead(null)}
+        lead={selectedCompletedLead}
+      />
     </div>
   );
 }

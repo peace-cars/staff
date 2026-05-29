@@ -11,6 +11,7 @@ export interface InspectionPoint {
   status: 'pass' | 'fail' | 'pending';
   notes: string;
   photo?: string;
+  weight?: number;
 }
 
 export const compressAndGetBase64 = (file: File, maxWidth = 1280, quality = 0.8): Promise<{ base64: string, dataUrl: string }> => {
@@ -54,50 +55,50 @@ export const compressAndGetBase64 = (file: File, maxWidth = 1280, quality = 0.8)
 
 const defaultChecklist: Record<string, InspectionPoint[]> = {
   exterior: [
-    { id: 'paint', label: 'Paint & Body Panels', status: 'pending', notes: '' },
-    { id: 'glass', label: 'Windshield & Glass', status: 'pending', notes: '' },
-    { id: 'lights', label: 'Headlights, Taillights & Indicators', status: 'pending', notes: '' },
-    { id: 'tires', label: 'Tire Tread Depth & Sidewalls', status: 'pending', notes: '' },
-    { id: 'wheels', label: 'Wheels & Rims Condition', status: 'pending', notes: '' },
-    { id: 'bumpers', label: 'Bumpers & Fenders', status: 'pending', notes: '' },
-    { id: 'mirrors', label: 'Side Mirrors & Antenna', status: 'pending', notes: '' },
-    { id: 'undercarriage', label: 'Undercarriage & Rust Check', status: 'pending', notes: '' },
-    { id: 'wipers', label: 'Wiper Blades & Washer System', status: 'pending', notes: '' },
-    { id: 'exhaust', label: 'Exhaust Pipe & Emissions', status: 'pending', notes: '' },
+    { id: 'paint', label: 'Paint & Body Panels', status: 'pending', notes: '', weight: 4 },
+    { id: 'glass', label: 'Windshield & Glass', status: 'pending', notes: '', weight: 2 },
+    { id: 'lights', label: 'Headlights, Taillights & Indicators', status: 'pending', notes: '', weight: 2 },
+    { id: 'tires', label: 'Tire Tread Depth & Sidewalls', status: 'pending', notes: '', weight: 3 },
+    { id: 'wheels', label: 'Wheels & Rims Condition', status: 'pending', notes: '', weight: 2 },
+    { id: 'bumpers', label: 'Bumpers & Fenders', status: 'pending', notes: '', weight: 2 },
+    { id: 'mirrors', label: 'Side Mirrors & Antenna', status: 'pending', notes: '', weight: 1 },
+    { id: 'undercarriage', label: 'Undercarriage & Rust Check', status: 'pending', notes: '', weight: 4 },
+    { id: 'wipers', label: 'Wiper Blades & Washer System', status: 'pending', notes: '', weight: 1 },
+    { id: 'exhaust', label: 'Exhaust Pipe & Emissions', status: 'pending', notes: '', weight: 3 },
   ],
   interior: [
-    { id: 'seats', label: 'Seats & Upholstery', status: 'pending', notes: '' },
-    { id: 'dashboard', label: 'Dashboard & Instrument Cluster', status: 'pending', notes: '' },
-    { id: 'ac', label: 'Climate Control / AC & Heating', status: 'pending', notes: '' },
-    { id: 'odometer', label: 'Odometer Verification & Mileage', status: 'pending', notes: '' },
-    { id: 'infotainment', label: 'Infotainment & Audio System', status: 'pending', notes: '' },
-    { id: 'windows', label: 'Power Windows & Locks', status: 'pending', notes: '' },
-    { id: 'airbags', label: 'Airbag Indicators & Safety', status: 'pending', notes: '' },
-    { id: 'carpet', label: 'Carpet, Headliner & Trim', status: 'pending', notes: '' },
-    { id: 'seatbelts', label: 'Seatbelt Function & Condition', status: 'pending', notes: '' },
-    { id: 'steering_wheel', label: 'Steering Wheel & Column', status: 'pending', notes: '' },
+    { id: 'seats', label: 'Seats & Upholstery', status: 'pending', notes: '', weight: 3 },
+    { id: 'dashboard', label: 'Dashboard & Instrument Cluster', status: 'pending', notes: '', weight: 2 },
+    { id: 'ac', label: 'Climate Control / AC & Heating', status: 'pending', notes: '', weight: 3 },
+    { id: 'odometer', label: 'Odometer Verification & Mileage', status: 'pending', notes: '', weight: 4 },
+    { id: 'infotainment', label: 'Infotainment & Audio System', status: 'pending', notes: '', weight: 2 },
+    { id: 'windows', label: 'Power Windows & Locks', status: 'pending', notes: '', weight: 1 },
+    { id: 'airbags', label: 'Airbag Indicators & Safety', status: 'pending', notes: '', weight: 5 },
+    { id: 'carpet', label: 'Carpet, Headliner & Trim', status: 'pending', notes: '', weight: 1 },
+    { id: 'seatbelts', label: 'Seatbelt Function & Condition', status: 'pending', notes: '', weight: 5 },
+    { id: 'steering_wheel', label: 'Steering Wheel & Column', status: 'pending', notes: '', weight: 2 },
   ],
   mechanical: [
-    { id: 'engine', label: 'Engine Performance & Sound', status: 'pending', notes: '' },
-    { id: 'braking', label: 'Brake Pads, Discs & Lines', status: 'pending', notes: '' },
-    { id: 'steering', label: 'Steering Response & Alignment', status: 'pending', notes: '' },
-    { id: 'suspension', label: 'Suspension & Shock Absorbers', status: 'pending', notes: '' },
-    { id: 'transmission', label: 'Transmission / Gearbox Shift', status: 'pending', notes: '' },
-    { id: 'fluids', label: 'Oil, Coolant & Fluid Levels', status: 'pending', notes: '' },
-    { id: 'leaks', label: 'Leak Inspection (Engine Bay & Under)', status: 'pending', notes: '' },
-    { id: 'battery_mech', label: 'Battery Health & Terminals', status: 'pending', notes: '' },
-    { id: 'clutch', label: 'Clutch / Torque Converter', status: 'pending', notes: '' },
-    { id: 'drivetrain', label: 'Drivetrain & CV Joints', status: 'pending', notes: '' },
+    { id: 'engine', label: 'Engine Performance & Sound', status: 'pending', notes: '', weight: 5 },
+    { id: 'braking', label: 'Brake Pads, Discs & Lines', status: 'pending', notes: '', weight: 5 },
+    { id: 'steering', label: 'Steering Response & Alignment', status: 'pending', notes: '', weight: 4 },
+    { id: 'suspension', label: 'Suspension & Shock Absorbers', status: 'pending', notes: '', weight: 3 },
+    { id: 'transmission', label: 'Transmission / Gearbox Shift', status: 'pending', notes: '', weight: 5 },
+    { id: 'fluids', label: 'Oil, Coolant & Fluid Levels', status: 'pending', notes: '', weight: 2 },
+    { id: 'leaks', label: 'Leak Inspection (Engine Bay & Under)', status: 'pending', notes: '', weight: 4 },
+    { id: 'battery_mech', label: 'Battery Health & Terminals', status: 'pending', notes: '', weight: 3 },
+    { id: 'clutch', label: 'Clutch / Torque Converter', status: 'pending', notes: '', weight: 4 },
+    { id: 'drivetrain', label: 'Drivetrain & CV Joints', status: 'pending', notes: '', weight: 4 },
   ],
   ev: [
-    { id: 'battery', label: 'High Voltage Battery Health (SOH)', status: 'pending', notes: '' },
-    { id: 'charging', label: 'Charging Port & Cable', status: 'pending', notes: '' },
-    { id: 'thermal', label: 'Battery Thermal Management', status: 'pending', notes: '' },
-    { id: 'motor', label: 'Electric Motor & Inverter', status: 'pending', notes: '' },
-    { id: 'regen', label: 'Regenerative Braking System', status: 'pending', notes: '' },
-    { id: 'range', label: 'Range Test & Verification', status: 'pending', notes: '' },
-    { id: 'onboard_charger', label: 'Onboard Charger Unit', status: 'pending', notes: '' },
-    { id: 'hv_wiring', label: 'High Voltage Wiring Insulation', status: 'pending', notes: '' },
+    { id: 'battery', label: 'High Voltage Battery Health (SOH)', status: 'pending', notes: '', weight: 5 },
+    { id: 'charging', label: 'Charging Port & Cable', status: 'pending', notes: '', weight: 3 },
+    { id: 'thermal', label: 'Battery Thermal Management', status: 'pending', notes: '', weight: 4 },
+    { id: 'motor', label: 'Electric Motor & Inverter', status: 'pending', notes: '', weight: 5 },
+    { id: 'regen', label: 'Regenerative Braking System', status: 'pending', notes: '', weight: 4 },
+    { id: 'range', label: 'Range Test & Verification', status: 'pending', notes: '', weight: 4 },
+    { id: 'onboard_charger', label: 'Onboard Charger Unit', status: 'pending', notes: '', weight: 4 },
+    { id: 'hv_wiring', label: 'High Voltage Wiring Insulation', status: 'pending', notes: '', weight: 5 },
   ]
 };
 
@@ -131,7 +132,19 @@ export function useInspectionState(leadId: string | undefined) {
     if (!pts) return 0;
     const evaluated = pts.filter(p => p.status !== 'pending');
     if (evaluated.length === 0) return 0;
-    return Math.round((evaluated.filter(p => p.status === 'pass').length / pts.length) * 100);
+    
+    let totalWeight = 0;
+    let earnedWeight = 0;
+    
+    evaluated.forEach(p => {
+      const weight = p.weight || 1;
+      totalWeight += weight;
+      if (p.status === 'pass') {
+        earnedWeight += weight;
+      }
+    });
+    
+    return totalWeight === 0 ? 0 : Math.round((earnedWeight / totalWeight) * 100);
   }, [checklist]);
 
   useEffect(() => {
@@ -295,7 +308,7 @@ export function useInspectionState(leadId: string | undefined) {
         if (!r.ok) throw new Error(`Access denied (${r.status})`);
         return r.json();
       })
-      .then(data => setLead(data))
+      .then(data => setLead(unwrapApiResponse(data)))
       .catch(err => {
         console.error(err);
         setFetchError(err.message);

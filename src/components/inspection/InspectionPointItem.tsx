@@ -61,13 +61,28 @@ export function InspectionPointItem({ category, point, leadId, updatePoint, setU
 
   return (
     <div className="rounded-2xl bg-surface-card border border-border-subtle/50 overflow-hidden shadow-sm">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle/40">
-        <p className="text-[11px] font-bold text-text-main uppercase tracking-wider flex-1 pr-3 leading-tight">{point.label}</p>
-        <div className="flex rounded-xl overflow-hidden border border-border-subtle shadow-sm shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 border-b border-border-subtle/40 gap-3">
+        <div className="flex-1">
+          <p className="text-[12px] font-bold text-text-main leading-tight mb-1">{point.label}</p>
+          <div className="flex items-center gap-1.5">
+             <span className="text-[8px] font-bold text-text-secondary uppercase tracking-widest bg-bg-base px-2 py-0.5 rounded-md border border-border-subtle shadow-sm">
+               Weight Impact: {point.weight || 1}
+             </span>
+             {point.status !== 'pending' && (
+               <span className={cn(
+                 "text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md",
+                 point.status === 'pass' ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+               )}>
+                 {point.status === 'pass' ? 'Passed' : 'Failed'}
+               </span>
+             )}
+          </div>
+        </div>
+        <div className="flex rounded-xl overflow-hidden border border-border-subtle shadow-sm shrink-0 h-10 w-full sm:w-auto">
           <button 
             onClick={() => updatePoint(category, point.id, { status: 'pass' })}
             className={cn(
-              "h-10 px-4 flex items-center gap-1.5 text-[11px] font-bold transition-all",
+              "flex-1 sm:px-5 flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all",
               point.status === 'pass'
                 ? "bg-emerald-500 text-white"
                 : "bg-surface-hover text-text-muted hover:bg-emerald-500/10 hover:text-emerald-500"
@@ -76,11 +91,11 @@ export function InspectionPointItem({ category, point, leadId, updatePoint, setU
             <CheckCircle2 size={14} />
             <span>Pass</span>
           </button>
-          <div className="w-px bg-border-subtle" />
+          <div className="w-px bg-border-subtle shrink-0" />
           <button 
             onClick={() => updatePoint(category, point.id, { status: 'fail' })}
             className={cn(
-              "h-10 px-4 flex items-center gap-1.5 text-[11px] font-bold transition-all",
+              "flex-1 sm:px-5 flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all",
               point.status === 'fail'
                 ? "bg-red-500 text-white"
                 : "bg-surface-hover text-text-muted hover:bg-red-500/10 hover:text-red-500"

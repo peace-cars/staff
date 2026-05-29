@@ -58,9 +58,9 @@ export function InspectionSheets({
                 scores[activeSheet] > 70 ? "text-emerald-500" : scores[activeSheet] > 40 ? "text-amber-500" : "text-red-500"
               )}>{scores[activeSheet]}%</div>
               <div>
-                <p className="text-[10px] font-bold text-text-main">Computed Score</p>
-                <p className="text-[9px] text-text-secondary">
-                  {checklist[activeSheet].filter(p=>p.status==='pass').length} pass / {checklist[activeSheet].filter(p=>p.status==='fail').length} fail
+                <p className="text-[10px] font-bold text-text-main uppercase tracking-wider">Weighted Score</p>
+                <p className="text-[9px] text-text-secondary font-medium mt-0.5">
+                  {checklist[activeSheet].filter(p=>p.status!=='pending').length} / {checklist[activeSheet].length} points evaluated
                 </p>
               </div>
             </div>

@@ -13,7 +13,7 @@ interface InspectionCategoriesProps {
 
 export function InspectionCategories({ lead, commRate, scores, checklist, setActiveSheet }: InspectionCategoriesProps) {
   return (
-    <div className="lg:col-span-5 space-y-6">
+    <div className="w-full space-y-4">
       {/* Estimated Commission */}
       <div className="bg-gradient-to-r from-primary-main to-primary-main/80 rounded-3xl p-6 text-center text-white shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 p-4 opacity-10">
