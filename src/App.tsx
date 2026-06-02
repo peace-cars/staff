@@ -90,6 +90,14 @@ export default function App() {
                     </ProtectedRoute>
                   } />
 
+                  <Route path="/sourcing" element={
+                    <ProtectedRoute>
+                      <ApplePageTransition backPath="/">
+                        <Dashboard activeTab="sourcing" />
+                      </ApplePageTransition>
+                    </ProtectedRoute>
+                  } />
+
                   <Route path="/budgets" element={
                     <ProtectedRoute>
                       <ApplePageTransition backPath="/">

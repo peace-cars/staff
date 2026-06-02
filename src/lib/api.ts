@@ -3,8 +3,15 @@ import { Capacitor, CapacitorHttp } from '@capacitor/core';
 const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   const isNative = Capacitor.isNativePlatform();
-  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  return (isLocalhost && !isNative) ? 'http://localhost:3000' : 'https://backend-eabm.onrender.com';
+  const isLocalhost =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  let base =
+    isLocalhost && !isNative ? 'http://localhost:3000' : 'https://backend-eabm.onrender.com';
+  if (!base.endsWith('/api/v1')) {
+    base = base.replace(/\/+$/, '') + '/api/v1';
+  }
+  return base;
 };
 
 export const API_URL = getApiUrl();
@@ -26,16 +33,19 @@ async function getCachedData(key: string) {
 
 function setCachedData(key: string, data: any) {
   try {
-    localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }));
+    localStorage.setItem(
+      CACHE_PREFIX + key,
+      JSON.stringify({
+        data,
+        timestamp: Date.now(),
+      }),
+    );
   } catch (e) {
     // If storage is full, clear old cache
     if (e.name === 'QuotaExceededError') {
       Object.keys(localStorage)
-        .filter(k => k.startsWith(CACHE_PREFIX))
-        .forEach(k => localStorage.removeItem(k));
+        .filter((k) => k.startsWith(CACHE_PREFIX))
+        .forEach((k) => localStorage.removeItem(k));
     }
   }
 }
@@ -45,10 +55,10 @@ export async function apiFetch<T>(endpoint: string, options: any = {}): Promise<
   const isCacheable = method === 'GET';
   const cacheKey = btoa(endpoint); // Simple key
   const url = `${API_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-  
+
   const sessionStr = localStorage.getItem('staff_session');
   let token = null;
-  
+
   if (sessionStr) {
     try {
       const session = JSON.parse(sessionStr);
@@ -60,7 +70,7 @@ export async function apiFetch<T>(endpoint: string, options: any = {}): Promise<
 
   const headers = {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
@@ -94,12 +104,12 @@ export async function apiFetch<T>(endpoint: string, options: any = {}): Promise<
 
   try {
     const result = await executeRequest();
-    
+
     // Success: Update cache if it's a GET request
     if (isCacheable) {
       setCachedData(cacheKey, result);
     }
-    
+
     return result;
   } catch (error) {
     // Failure: Try to return cached data for GET requests
@@ -110,19 +120,20 @@ export async function apiFetch<T>(endpoint: string, options: any = {}): Promise<
         return cached;
       }
     }
-    
+
     console.error('[API] Fatal Error:', error);
     throw error;
   }
 }
 
 export const api = {
-  get: <T>(endpoint: string, options?: RequestInit) => apiFetch<T>(endpoint, { ...options, method: 'GET' }),
-  post: <T>(endpoint: string, body: any, options?: RequestInit) => 
+  get: <T>(endpoint: string, options?: RequestInit) =>
+    apiFetch<T>(endpoint, { ...options, method: 'GET' }),
+  post: <T>(endpoint: string, body: any, options?: RequestInit) =>
     apiFetch<T>(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
-  patch: <T>(endpoint: string, body: any, options?: RequestInit) => 
+  patch: <T>(endpoint: string, body: any, options?: RequestInit) =>
     apiFetch<T>(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(body) }),
-  delete: <T>(endpoint: string, options?: RequestInit) => 
+  delete: <T>(endpoint: string, options?: RequestInit) =>
     apiFetch<T>(endpoint, { ...options, method: 'DELETE' }),
 };
 

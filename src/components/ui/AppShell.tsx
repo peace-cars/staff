@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { 
-  CheckCircle2, LayoutGrid, Users, Shield, Banknote, MessageCircle, Bell, LogOut, User, Sun, Moon
+  CheckCircle2, LayoutGrid, Users, Shield, Banknote, MessageCircle, Bell, LogOut, User, Sun, Moon, Search
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { motion } from 'framer-motion';
@@ -22,6 +22,7 @@ export function AppShell({ children }: AppShellProps) {
 
   const navItems = [
     { label: 'Leads', icon: CheckCircle2, path: '/', id: 'leads' },
+    { label: 'Sourcing', icon: Search, path: '/sourcing', id: 'sourcing' },
     { label: 'Tasks', icon: LayoutGrid, path: '/tasks', id: 'tasks' },
     { label: 'Budget', icon: Banknote, path: '/budgets', id: 'budget' },
     { label: 'Chat', icon: MessageCircle, path: '/messages', id: 'messages' },

@@ -1,17 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { unwrapApiResponse } from './api';
+import { unwrapApiResponse, API_URL } from './api';
 
 import { Capacitor } from '@capacitor/core';
-
-const getApiUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  const isNative = Capacitor.isNativePlatform();
-  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  return (isLocalhost && !isNative) ? 'http://localhost:3000' : 'https://backend-eabm.onrender.com';
-};
-
-const API_URL = getApiUrl();
 
 interface UserProfile {
   id: string;
@@ -36,7 +27,12 @@ interface AuthContextType {
   session: SessionData | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ error?: string }>;
-  signup: (email: string, password: string, fullName: string, phone: string) => Promise<{ error?: string }>;
+  signup: (
+    email: string,
+    password: string,
+    fullName: string,
+    phone: string,
+  ) => Promise<{ error?: string }>;
   logout: () => void;
 }
 
@@ -66,29 +62,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const parsed = JSON.parse(stored);
           const nowSec = Math.floor(Date.now() / 1000);
-          
+
           // If token has expired or has less than 15 minutes remaining, refresh it!
           if (parsed.expires_at && parsed.expires_at - nowSec < 900) {
             console.log('[Staff Auth] Token is expiring or expired, attempting refresh...');
             if (parsed.refresh_token) {
               const { data, error } = await supabase.auth.refreshSession({
-                refresh_token: parsed.refresh_token
+                refresh_token: parsed.refresh_token,
               });
-              
+
               if (!error && data?.session) {
                 const newSessionData: SessionData = {
                   access_token: data.session.access_token,
                   refresh_token: data.session.refresh_token,
                   expires_at: data.session.expires_at || Math.floor(Date.now() / 1000) + 3600,
                   user: parsed.user,
-                  profile: parsed.profile
+                  profile: parsed.profile,
                 };
                 localStorage.setItem('staff_session', JSON.stringify(newSessionData));
                 localStorage.setItem('staffId', parsed.user.id);
                 setSession(newSessionData);
                 await supabase.auth.setSession({
                   access_token: data.session.access_token,
-                  refresh_token: data.session.refresh_token
+                  refresh_token: data.session.refresh_token,
                 });
                 setLoading(false);
                 return;
@@ -107,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSession(parsed);
             await supabase.auth.setSession({
               access_token: parsed.access_token,
-              refresh_token: parsed.refresh_token
+              refresh_token: parsed.refresh_token,
             });
           }
         } catch (e) {
@@ -132,27 +128,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!session?.expires_at || !session?.refresh_token) return;
     const interval = setInterval(async () => {
       const nowSec = Math.floor(Date.now() / 1000);
-      
+
       // If token expires in less than 15 minutes, refresh in background
       if (session.expires_at - nowSec < 900) {
         console.log('[Staff Auth] Background token refresh triggered...');
         const { data, error } = await supabase.auth.refreshSession({
-          refresh_token: session.refresh_token
+          refresh_token: session.refresh_token,
         });
-        
+
         if (!error && data?.session) {
           const newSessionData: SessionData = {
             access_token: data.session.access_token,
             refresh_token: data.session.refresh_token,
             expires_at: data.session.expires_at || Math.floor(Date.now() / 1000) + 3600,
             user: session.user,
-            profile: session.profile
+            profile: session.profile,
           };
           localStorage.setItem('staff_session', JSON.stringify(newSessionData));
           setSession(newSessionData);
           await supabase.auth.setSession({
             access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token
+            refresh_token: data.session.refresh_token,
           });
           console.log('[Staff Auth] Background token refresh successful.');
         } else {
@@ -181,7 +177,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const role = data.profile?.role;
       const staffRoles = ['STAFF', 'DISTRICT_MANAGER', 'GENERAL_MANAGER', 'FINANCE_AUDITOR'];
       if (!role || !staffRoles.includes(role)) {
-        return { error: 'ACCESS DENIED: This portal is for Staff only. Your role: ' + (role || 'NONE') };
+        return {
+          error: 'ACCESS DENIED: This portal is for Staff only. Your role: ' + (role || 'NONE'),
+        };
       }
 
       const sessionData: SessionData = {
@@ -199,7 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Handshake: Notify Supabase client
       await supabase.auth.setSession({
         access_token: sessionData.access_token,
-        refresh_token: sessionData.refresh_token
+        refresh_token: sessionData.refresh_token,
       });
 
       return {};
@@ -208,7 +206,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signup = async (email: string, password: string, fullName: string, phone: string): Promise<{ error?: string }> => {
+  const signup = async (
+    email: string,
+    password: string,
+    fullName: string,
+    phone: string,
+  ): Promise<{ error?: string }> => {
     try {
       const res = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
@@ -243,7 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Handshake: Notify Supabase client
       await supabase.auth.setSession({
         access_token: sessionData.access_token,
-        refresh_token: sessionData.refresh_token
+        refresh_token: sessionData.refresh_token,
       });
 
       return {};

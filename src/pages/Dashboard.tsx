@@ -7,6 +7,7 @@ import TasksManager from '../components/TasksManager';
 import BudgetRequests from '../components/BudgetRequests';
 import TeamManager from '../components/TeamManager';
 import InventoryModule from '../components/InventoryModule';
+import SourcingModule from '../components/SourcingModule';
 import { ModernLeadCard } from '../components/ui/ModernLeadCard';
 import NegotiationWidget from '../components/NegotiationWidget';
 import { cn } from '../lib/utils';
@@ -15,7 +16,7 @@ import { InspectionReportView } from '../components/ui/InspectionReportView';
 import { SkeletonCard } from '../components/ui/Skeleton';
 
 interface DashboardProps {
-  activeTab?: 'leads' | 'tasks' | 'budget' | 'performance' | 'team' | 'inventory';
+  activeTab?: 'leads' | 'sourcing' | 'tasks' | 'budget' | 'performance' | 'team' | 'inventory';
 }
 
 export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
@@ -34,6 +35,7 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
 
   const [isSyncing, setIsSyncing] = useState(initialSyncState);
   const [leadTab, setLeadTab] = useState<'TASKS' | 'COMPLETED'>('TASKS');
+  const [selectedCompletedLead, setSelectedCompletedLead] = useState<any>(null);
 
   useEffect(() => {
     if (!session) return;
@@ -159,11 +161,10 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
 
 
 
-  const [selectedCompletedLead, setSelectedCompletedLead] = useState<any>(null);
-
   return (
     <div className="pb-24">
       {activeTab === 'leads' && renderLeads()}
+      {activeTab === 'sourcing' && <SourcingModule />}
       {activeTab === 'tasks' && <TasksManager />}
       {activeTab === 'budget' && <BudgetRequests />}
       {(activeTab === 'team' && (profile?.role === 'DISTRICT_MANAGER' || profile?.role === 'GENERAL_MANAGER')) && <TeamManager />}
