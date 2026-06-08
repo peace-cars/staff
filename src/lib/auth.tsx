@@ -48,7 +48,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const logout = React.useCallback(() => {
+  const logout = React.useCallback(async () => {
+    try {
+      await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      console.error(e);
+    }
     localStorage.removeItem('staff_session');
     localStorage.removeItem('staffId');
     setSession(null);
@@ -66,45 +71,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // If token has expired or has less than 15 minutes remaining, refresh it!
           if (parsed.expires_at && parsed.expires_at - nowSec < 900) {
             console.log('[Staff Auth] Token is expiring or expired, attempting refresh...');
-            if (parsed.refresh_token) {
-              const { data, error } = await supabase.auth.refreshSession({
-                refresh_token: parsed.refresh_token,
-              });
-
-              if (!error && data?.session) {
-                const newSessionData: SessionData = {
-                  access_token: data.session.access_token,
-                  refresh_token: data.session.refresh_token,
-                  expires_at: data.session.expires_at || Math.floor(Date.now() / 1000) + 3600,
-                  user: parsed.user,
-                  profile: parsed.profile,
-                };
-                localStorage.setItem('staff_session', JSON.stringify(newSessionData));
-                localStorage.setItem('staffId', parsed.user.id);
-                setSession(newSessionData);
-                await supabase.auth.setSession({
-                  access_token: data.session.access_token,
-                  refresh_token: data.session.refresh_token,
-                });
-                setLoading(false);
-                return;
-              } else {
-                console.warn('[Staff Auth] Refresh failed, logging out:', error?.message);
-                localStorage.removeItem('staff_session');
-                localStorage.removeItem('staffId');
-                setSession(null);
-              }
+            const res = await fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
+            if (res.ok) {
+              const result = await res.json();
+              const refreshed = result.data ?? result;
+              const newSessionData: SessionData = {
+                // Store real access_token so apiClient Bearer headers work
+                access_token: refreshed.session?.access_token || parsed.access_token || '',
+                refresh_token: '',
+                expires_at: refreshed.session?.expires_at || Math.floor(Date.now() / 1000) + 3600,
+                user: refreshed.user || parsed.user,
+                profile: refreshed.profile || parsed.profile,
+              };
+              localStorage.setItem('staff_session', JSON.stringify(newSessionData));
+              localStorage.setItem('staffId', (refreshed.user || parsed.user).id);
+              setSession(newSessionData);
+              setLoading(false);
+              return;
             } else {
+              console.warn('[Staff Auth] Refresh failed, logging out');
               localStorage.removeItem('staff_session');
               localStorage.removeItem('staffId');
               setSession(null);
+              // Fall through so setLoading(false) is reached below
             }
           } else {
             setSession(parsed);
-            await supabase.auth.setSession({
-              access_token: parsed.access_token,
-              refresh_token: parsed.refresh_token,
-            });
           }
         } catch (e) {
           console.error('[Staff Auth] Init error:', e);
@@ -125,34 +117,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Periodic background token refresh check
   useEffect(() => {
-    if (!session?.expires_at || !session?.refresh_token) return;
+    if (!session?.expires_at) return;
     const interval = setInterval(async () => {
       const nowSec = Math.floor(Date.now() / 1000);
 
       // If token expires in less than 15 minutes, refresh in background
       if (session.expires_at - nowSec < 900) {
         console.log('[Staff Auth] Background token refresh triggered...');
-        const { data, error } = await supabase.auth.refreshSession({
-          refresh_token: session.refresh_token,
-        });
-
-        if (!error && data?.session) {
-          const newSessionData: SessionData = {
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-            expires_at: data.session.expires_at || Math.floor(Date.now() / 1000) + 3600,
-            user: session.user,
-            profile: session.profile,
-          };
-          localStorage.setItem('staff_session', JSON.stringify(newSessionData));
-          setSession(newSessionData);
-          await supabase.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-          });
-          console.log('[Staff Auth] Background token refresh successful.');
-        } else {
-          console.warn('[Staff Auth] Background refresh failed:', error?.message);
+        try {
+          const res = await fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
+          if (res.ok) {
+            const result = await res.json();
+            const refreshed = result.data ?? result;
+            const newSessionData: SessionData = {
+              // Persist real access_token so apiClient Bearer headers work
+              access_token: refreshed.session?.access_token || session.access_token || '',
+              refresh_token: '',
+              expires_at: refreshed.session?.expires_at || Math.floor(Date.now() / 1000) + 3600,
+              user: refreshed.user || session.user,
+              profile: refreshed.profile || session.profile,
+            };
+            localStorage.setItem('staff_session', JSON.stringify(newSessionData));
+            setSession(newSessionData);
+            console.log('[Staff Auth] Background token refresh successful.');
+          } else {
+            console.warn('[Staff Auth] Background refresh failed');
+          }
+        } catch (e) {
+          console.error('[Staff Auth] Background refresh error', e);
         }
       }
     }, 60000); // Check every 60 seconds
@@ -183,9 +175,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const sessionData: SessionData = {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-        expires_at: data.session.expires_at,
+        access_token: data.session?.access_token || '',
+        refresh_token: data.session?.refresh_token || '',
+        expires_at: data.session?.expires_at || Math.floor(Date.now() / 1000) + 3600,
         user: data.user,
         profile: data.profile,
       };
@@ -194,11 +186,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('staffId', data.user.id);
       setSession(sessionData);
 
-      // Handshake: Notify Supabase client
-      await supabase.auth.setSession({
-        access_token: sessionData.access_token,
-        refresh_token: sessionData.refresh_token,
-      });
+      // Supabase realtime is disabled
 
       return {};
     } catch (err: any) {
@@ -232,9 +220,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const sessionData: SessionData = {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-        expires_at: data.session.expires_at,
+        access_token: data.session?.access_token || '',
+        refresh_token: data.session?.refresh_token || '',
+        expires_at: data.session?.expires_at || Math.floor(Date.now() / 1000) + 3600,
         user: data.user,
         profile: data.profile,
       };
@@ -243,11 +231,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('staffId', data.user.id);
       setSession(sessionData);
 
-      // Handshake: Notify Supabase client
-      await supabase.auth.setSession({
-        access_token: sessionData.access_token,
-        refresh_token: sessionData.refresh_token,
-      });
+      // Supabase realtime is disabled
 
       return {};
     } catch (err: any) {

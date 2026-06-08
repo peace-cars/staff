@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Loader2, AlertCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { API_URL } from '../lib/api';
 
 interface ImageUploadProps {
   bucket: string;
@@ -82,26 +82,23 @@ const compressImage = (file: File, maxWidth = 1280): Promise<File> => {
     for (let file of files) {
       file = await compressImage(file);
       try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-        const filePath = folder ? `${folder}/${fileName}` : fileName;
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('bucket', bucket);
+        if (folder) formData.append('folder', folder);
 
-        const { data: { user } } = await supabase.auth.getUser();
+        const res = await fetch(`${API_URL}/upload`, {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        });
 
-        if (!user) {
-          throw new Error("Please sign in to upload files.");
+        if (!res.ok) {
+          throw new Error('Upload failed');
         }
 
-        const arrayBuffer = await file.arrayBuffer();
-        const { error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(filePath, arrayBuffer, { contentType: file.type || 'image/webp' });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from(bucket)
-          .getPublicUrl(filePath);
+        const data = await res.json();
+        const publicUrl = data.data.url;
 
         uploadedUrls.push(publicUrl);
         setPreviews(prev => [...prev, publicUrl]);

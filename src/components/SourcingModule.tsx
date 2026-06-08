@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
+import { fetchWithCache } from '../lib/cache';
 import { 
   Car, Search, CheckCircle2, PlusCircle, Clock, 
   Phone, User, AlertTriangle, ChevronDown, ChevronUp,
@@ -32,19 +33,23 @@ export default function SourcingModule() {
   const [selectedReq, setSelectedReq] = useState<any>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const load = useCallback(async (silent = false) => {
+  const load = useCallback((silent = false) => {
     if (!session) return;
     if (!silent) setLoading(true);
     else setRefreshing(true);
-    try {
-      const data = await api.get<any[]>('/sourcing-requests/assigned');
+    
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    fetchWithCache(`${apiUrl}/sourcing-requests/assigned`, {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    }, (data) => {
       setRequests(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('[SourcingModule] Failed to fetch:', err);
-    } finally {
       setLoading(false);
       setRefreshing(false);
-    }
+    }).catch(err => {
+      console.error('[SourcingModule] Failed to fetch:', err);
+      setLoading(false);
+      setRefreshing(false);
+    });
   }, [session]);
 
   useEffect(() => { load(); }, [load]);
@@ -107,7 +112,7 @@ export default function SourcingModule() {
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {activeRequests.map(req => {
             const urgency = URGENCY_CONFIG[req.urgency] || URGENCY_CONFIG.FLEXIBLE;
             const statusCfg = STATUS_CONFIG[req.status] || STATUS_CONFIG.ASSIGNED;
@@ -117,74 +122,53 @@ export default function SourcingModule() {
             return (
               <div
                 key={req.id}
-                className="bg-surface-card border border-border-subtle/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all"
+                className="bg-surface-card border border-border-subtle/50 rounded-xl overflow-hidden shadow-sm hover:border-border-subtle/80 transition-all flex flex-col"
               >
-                {/* Card Header */}
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-primary-main/10 border border-primary-main/20 flex items-center justify-center shrink-0">
-                        <Car size={20} className="text-primary-main" />
+                <div className="p-3 md:p-4 flex flex-col md:flex-row gap-4 items-start md:items-center">
+                  {/* Left: Icon & Core Details */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-12 h-12 rounded-xl bg-primary-main/10 border border-primary-main/20 flex items-center justify-center shrink-0">
+                      <Car size={20} className="text-primary-main" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h3 className="font-black text-[14px] text-text-main leading-tight truncate">{req.make} {req.model}</h3>
+                        <span className={cn('text-[9px] font-bold px-1.5 h-4 flex items-center rounded-md shrink-0', statusCfg.bg, statusCfg.text)}>
+                          {statusCfg.label}
+                        </span>
                       </div>
-                      <div>
-                        <h3 className="font-black text-[16px] text-text-main leading-tight">{req.make} {req.model}</h3>
-                        <p className="text-[12px] text-text-secondary mt-0.5">{req.min_year} – {req.max_year} • {req.fuel_type || 'Any fuel'} • {req.transmission || 'Any trans'}</p>
+                      <p className="text-[12px] text-text-muted truncate font-medium">
+                        {req.min_year} – {req.max_year} • {req.fuel_type || 'Any'} • <span className="text-success font-bold">{Number(req.max_budget).toLocaleString()} ETB</span>
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 text-[11px]">
+                        <span className={cn('font-bold', urgency.color)}>
+                          ⚡ {urgency.label}
+                        </span>
+                        <span className="text-text-muted/60 flex items-center gap-1">
+                          <User size={10} /> {req.customer?.full_name || req.contact_name || '—'}
+                        </span>
+                        <span className="text-primary-main font-bold">
+                          {matchCount} match{matchCount !== 1 ? 'es' : ''}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span className={cn('text-[11px] font-bold px-2 py-1 rounded-lg', statusCfg.bg, statusCfg.text)}>
-                        {statusCfg.label}
-                      </span>
-                      <span className={cn('text-[11px] font-semibold', urgency.color)}>
-                        ⚡ {urgency.label}
-                      </span>
-                    </div>
                   </div>
 
-                  {/* Key Details Row */}
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="bg-bg-secondary rounded-xl p-3 border border-border-subtle/30">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Max Budget</p>
-                      <p className="text-[15px] font-black text-success">{Number(req.max_budget).toLocaleString()} ETB</p>
-                    </div>
-                    <div className="bg-bg-secondary rounded-xl p-3 border border-border-subtle/30">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Matches Proposed</p>
-                      <p className="text-[15px] font-black text-primary-main">{matchCount} / ∞</p>
-                    </div>
-                  </div>
-
-                  {/* Customer Info */}
-                  <div className="flex items-center gap-4 text-[13px] text-text-secondary mb-4 bg-bg-secondary/50 rounded-xl p-3 border border-border-subtle/20">
-                    <span className="flex items-center gap-1.5 font-semibold text-text-main">
-                      <User size={13} className="text-primary-main" />
-                      {req.customer?.full_name || req.contact_name}
-                    </span>
-                    {(req.customer?.phone_number || req.contact_phone) && (
-                      <a
-                        href={`tel:${req.customer?.phone_number || req.contact_phone}`}
-                        className="flex items-center gap-1.5 text-primary-main font-bold hover:underline"
-                      >
-                        <Phone size={13} />
-                        {req.customer?.phone_number || req.contact_phone}
-                      </a>
-                    )}
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setExpandedId(isExpanded ? null : req.id)}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border-subtle bg-bg-secondary text-text-secondary text-[13px] font-bold hover:bg-bg-base transition-all"
-                    >
-                      {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                      {isExpanded ? 'Hide' : 'Full'} Spec
-                    </button>
+                  {/* Right: Actions */}
+                  <div className="shrink-0 w-full md:w-auto flex flex-row md:flex-col gap-2 items-center md:items-end border-t md:border-t-0 border-border-subtle/30 pt-3 md:pt-0">
                     <button
                       onClick={() => setSelectedReq(req)}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary-main text-white text-[13px] font-bold hover:bg-primary-main/90 transition-all shadow-sm"
+                      className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-primary-main text-white text-[12px] font-bold hover:bg-primary-main/90 transition-all shadow-sm"
                     >
-                      <PlusCircle size={15} />
+                      <PlusCircle size={14} />
                       Propose Match
+                    </button>
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : req.id)}
+                      className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-border-subtle bg-bg-secondary text-text-secondary text-[12px] font-bold hover:bg-bg-base transition-all"
+                    >
+                      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      {isExpanded ? 'Hide' : 'Specs'}
                     </button>
                   </div>
                 </div>

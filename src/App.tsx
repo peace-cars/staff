@@ -15,16 +15,52 @@ import Splash from './components/ui/Splash';
 import { ApplePageTransition } from './components/ui/ApplePageTransition';
 import { initializePushNotifications } from './lib/push';
 import { CapacitorBackButtonHandler } from './components/ui/CapacitorBackButtonHandler';
+import { PwaInstallPrompt } from './components/ui/PwaInstallPrompt';
 import { Capacitor } from '@capacitor/core';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifs, setShowNotifs] = useState(false);
 
   useEffect(() => {
     if (session?.user?.id && Capacitor.isNativePlatform()) {
       initializePushNotifications(session.user.id);
     }
   }, [session]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!session?.user?.id) return;
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setNotifications(data);
+        }
+      } catch (e) {
+        console.error("Notifications Sync Failed", e);
+      }
+    };
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, [session]);
+
+  const handleMarkAllRead = async () => {
+    if (!session) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications/mark-all-read`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (e) {
+      console.error(e);
+    }
+  };
   
   if (loading) {
     return (
@@ -39,7 +75,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
   
-  return <AppShell>{children}</AppShell>;
+  return (
+    <AppShell 
+      notifications={notifications} 
+      showNotifs={showNotifs}
+      onToggleNotifs={() => setShowNotifs(!showNotifs)}
+      onMarkAllRead={handleMarkAllRead}
+    >
+      {children}
+    </AppShell>
+  );
 }
 
 export default function App() {
@@ -149,6 +194,7 @@ export default function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
+              <PwaInstallPrompt />
             </Router>
           )}
         </div>
@@ -156,4 +202,3 @@ export default function App() {
     </ThemeProvider>
   );
 }
-

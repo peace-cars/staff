@@ -46,6 +46,28 @@ export default function InventoryModule() {
     }
   };
 
+  const updateVehicleStatus = async (vehicleId: string, newStatus: string) => {
+    if (!session) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/vehicles/${vehicleId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        setVehicles(vehicles.map(v => v.id === vehicleId ? { ...v, status: newStatus } : v));
+      } else {
+        const error = unwrapApiResponse(await res.json());
+        alert(error?.message || 'Failed to update status');
+      }
+    } catch (err) {
+      console.error('Failed to update vehicle status', err);
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session || !session.profile?.branch_id) {
@@ -177,14 +199,22 @@ export default function InventoryModule() {
                 </div>
                 <div className="text-right">
                   <p className="text-base font-bold text-text-main tracking-tight">{(vehicle.retail_price_etb || 0).toLocaleString()} <span className="text-[9px] text-text-muted">ETB</span></p>
-                  <span className={cn(
-                    "text-[8px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider border",
-                    vehicle.status === 'SHOWROOM' 
-                      ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-                      : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                  )}>
-                    {vehicle.status}
-                  </span>
+                  <select
+                    value={vehicle.status}
+                    onChange={(e) => updateVehicleStatus(vehicle.id, e.target.value)}
+                    className={cn(
+                      "text-[8px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider border appearance-none cursor-pointer outline-none",
+                      vehicle.status === 'SHOWROOM' 
+                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                        : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                    )}
+                  >
+                    <option value="SOURCING">Sourcing</option>
+                    <option value="IN_TRANSIT">In Transit</option>
+                    <option value="CUSTOMS">Customs</option>
+                    <option value="SHOWROOM">Showroom</option>
+                    <option value="SOLD">Sold</option>
+                  </select>
                 </div>
               </div>
 
