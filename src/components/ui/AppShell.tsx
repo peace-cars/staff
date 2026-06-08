@@ -12,12 +12,14 @@ import {
   Sun,
   Moon,
   Search,
+  Download,
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../lib/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
+import { usePwaInstall } from '../../hooks/usePwaInstall';
 
 interface AppShellProps {
   notifications?: any[];
@@ -39,6 +41,7 @@ export function AppShell({
   const location = useLocation();
   const contentRef = useRef<HTMLDivElement>(null);
   const { session, logout } = useAuth();
+  const { isInstallable, installApp } = usePwaInstall();
   const profile = session?.profile;
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -101,6 +104,15 @@ export function AppShell({
           </div>
 
           <div className="flex items-center gap-2">
+            {isInstallable && (
+              <button
+                onClick={installApp}
+                className="hidden sm:flex items-center gap-2 px-3 py-2 bg-primary-main/10 text-primary-main rounded-xl hover:bg-primary-main/20 transition-all font-bold text-[12px]"
+              >
+                <Download size={14} />
+                Install App
+              </button>
+            )}
             <button
               onClick={toggleTheme}
               className="p-2.5 bg-surface-card border border-border-subtle rounded-xl hover:bg-surface-hover transition-all text-text-secondary"
