@@ -49,14 +49,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const logout = React.useCallback(async () => {
-    try {
-      await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
-    } catch (e) {
-      console.error(e);
-    }
+    // Clear state first — guarantees logout works even if the network call fails
     localStorage.removeItem('staff_session');
     localStorage.removeItem('staffId');
     setSession(null);
+    // Fire-and-forget server-side cookie cleanup
+    fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
     window.location.href = '/login';
   }, []);
 
@@ -115,41 +113,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => clearTimeout(fallbackTimer);
   }, []);
 
-  // Periodic background token refresh check
-  useEffect(() => {
-    if (!session?.expires_at) return;
-    const interval = setInterval(async () => {
-      const nowSec = Math.floor(Date.now() / 1000);
-
-      // If token expires in less than 15 minutes, refresh in background
-      if (session.expires_at - nowSec < 900) {
-        console.log('[Staff Auth] Background token refresh triggered...');
-        try {
-          const res = await fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
-          if (res.ok) {
-            const result = await res.json();
-            const refreshed = result.data ?? result;
-            const newSessionData: SessionData = {
-              // Persist real access_token so apiClient Bearer headers work
-              access_token: refreshed.session?.access_token || session.access_token || '',
-              refresh_token: '',
-              expires_at: refreshed.session?.expires_at || Math.floor(Date.now() / 1000) + 3600,
-              user: refreshed.user || session.user,
-              profile: refreshed.profile || session.profile,
-            };
-            localStorage.setItem('staff_session', JSON.stringify(newSessionData));
-            setSession(newSessionData);
-            console.log('[Staff Auth] Background token refresh successful.');
-          } else {
-            console.warn('[Staff Auth] Background refresh failed');
-          }
-        } catch (e) {
-          console.error('[Staff Auth] Background refresh error', e);
-        }
-      }
-    }, 60000); // Check every 60 seconds
-    return () => clearInterval(interval);
-  }, [session?.expires_at, logout]);
+  // Token refresh is now handled reactively by the API 401 interceptor.
+  // No background polling needed — eliminates single-use-token race conditions.
 
   const login = async (email: string, password: string): Promise<{ error?: string }> => {
     try {

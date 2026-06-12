@@ -95,7 +95,7 @@ export async function fetchWithCache(
   url: string,
   options: RequestInit = {},
   onData: (data: any) => void,
-  ttl: number = 30000 // 30s default TTL for freshness check
+  ttl: number = 24 * 60 * 60 * 1000 // 24h default TTL for freshness check
 ) {
   const cacheKey = `${url}_${options.method || 'GET'}_${JSON.stringify(options.body || '')}`;
 

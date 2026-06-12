@@ -1,5 +1,72 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
+// ─── Token Refresh Lock ───────────────────────────────────────────────────
+let isRefreshing = false;
+let refreshQueue: Array<(token: string | null) => void> = [];
+
+function onTokenRefreshed(newToken: string | null) {
+  refreshQueue.forEach(cb => cb(newToken));
+  refreshQueue = [];
+}
+
+async function attemptTokenRefresh(): Promise<string | null> {
+  if (isRefreshing) {
+    return new Promise(resolve => refreshQueue.push(resolve));
+  }
+  isRefreshing = true;
+  try {
+    const sessionStr = localStorage.getItem('staff_session');
+    const session = sessionStr ? JSON.parse(sessionStr) : null;
+
+    const res = await fetch(`${getApiUrl()}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: session?.refresh_token }),
+      credentials: 'include',
+    });
+
+    if (!res.ok) {
+      forceLogout();
+      onTokenRefreshed(null);
+      return null;
+    }
+
+    const result = await res.json();
+    const payload = result?.data ?? result;
+    const newAccessToken = payload.session?.access_token || payload.access_token;
+
+    if (newAccessToken && session) {
+      const updatedSession = {
+        ...session,
+        access_token: newAccessToken,
+        refresh_token: payload.session?.refresh_token || session.refresh_token,
+        expires_at: payload.session?.expires_at || Math.floor(Date.now() / 1000) + 3600,
+      };
+      localStorage.setItem('staff_session', JSON.stringify(updatedSession));
+      console.log('[Staff API] Token refresh successful via interceptor.');
+    }
+
+    onTokenRefreshed(newAccessToken || null);
+    return newAccessToken || null;
+  } catch (err) {
+    console.error('[Staff API] Token refresh failed:', err);
+    forceLogout();
+    onTokenRefreshed(null);
+    return null;
+  } finally {
+    isRefreshing = false;
+  }
+}
+
+function forceLogout() {
+  console.warn('[Staff API] Forcing logout due to invalid session.');
+  localStorage.removeItem('staff_session');
+  localStorage.removeItem('staffId');
+  if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+    window.location.href = '/login';
+  }
+}
+
 const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   const isNative = Capacitor.isNativePlatform();
@@ -93,10 +160,12 @@ export async function apiFetch<T>(endpoint: string, options: any = {}): Promise<
     }
 
     // Fallback for Web/PWA
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, { ...options, headers, credentials: 'include' });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'API request failed' }));
-      throw new Error(error.message || 'API request failed');
+      const errBody = await response.json().catch(() => ({ message: 'API request failed' }));
+      const err: any = new Error(errBody.message || 'API request failed');
+      err.status = response.status;
+      throw err;
     }
     const payload = await response.json();
     return unwrapApiResponse(payload);
@@ -104,15 +173,30 @@ export async function apiFetch<T>(endpoint: string, options: any = {}): Promise<
 
   try {
     const result = await executeRequest();
-
-    // Success: Update cache if it's a GET request
-    if (isCacheable) {
-      setCachedData(cacheKey, result);
+    if (isCacheable) setCachedData(cacheKey, result);
+    return result;
+  } catch (error: any) {
+    // ── 401 Interceptor ──────────────────────────────────────────────
+    if (error?.status === 401) {
+      console.warn(`[Staff API] 401 on ${endpoint} — attempting token refresh...`);
+      const newToken = await attemptTokenRefresh();
+      if (newToken) {
+        try {
+          const retryRes = await fetch(url, {
+            ...options,
+            headers: { ...headers, 'Authorization': `Bearer ${newToken}` },
+            credentials: 'include',
+          });
+          if (retryRes.ok) {
+            const retryData = await retryRes.json();
+            const result = unwrapApiResponse(retryData);
+            if (isCacheable) setCachedData(cacheKey, result);
+            return result;
+          }
+        } catch { /* fall through */ }
+      }
     }
 
-    return result;
-  } catch (error) {
-    // Failure: Try to return cached data for GET requests
     if (isCacheable) {
       const cached = await getCachedData(cacheKey);
       if (cached) {
@@ -120,7 +204,6 @@ export async function apiFetch<T>(endpoint: string, options: any = {}): Promise<
         return cached;
       }
     }
-
     console.error('[API] Fatal Error:', error);
     throw error;
   }

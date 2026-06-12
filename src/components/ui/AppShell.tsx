@@ -59,9 +59,9 @@ export function AppShell({
     navItems.splice(3, 0, { label: 'Vault', icon: Shield, path: '/showroom', id: 'showroom' });
   }
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    await logout();
+    // navigate('/login'); // No longer needed, session change triggers ProtectedRoute <Navigate>
   };
 
   useEffect(() => {

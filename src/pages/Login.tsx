@@ -30,7 +30,7 @@ export default function Login({ onTransition }: LoginProps) {
       return;
     }
 
-    window.location.href = '/';
+    navigate('/');
   };
 
   return (

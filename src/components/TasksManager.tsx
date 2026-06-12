@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { fetchWithCache } from '../lib/cache';
 import { InspectionReportView } from './ui/InspectionReportView';
+import { API_URL } from '../lib/api';
 
 export default function TasksManager() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export default function TasksManager() {
   const fetchTasks = async () => {
     if (!session) return;
     try {
-      await fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-tasks/my-tasks`, {
+      await fetchWithCache(`${API_URL}/staff-tasks/my-tasks`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
       }, (data) => {
         setTasks(Array.isArray(data) ? data : []);
@@ -35,7 +36,7 @@ export default function TasksManager() {
   const fetchLeads = async () => {
     if (!session) return;
     try {
-      await fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests/me`, {
+      await fetchWithCache(`${API_URL}/trade-in-requests/me`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
       }, (data) => {
         setLeads(Array.isArray(data) ? data : []);
@@ -58,7 +59,7 @@ export default function TasksManager() {
        });
     }
 
-    await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-tasks/${id}/progress`, {
+    await fetch(`${API_URL}/staff-tasks/${id}/progress`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -71,7 +72,7 @@ export default function TasksManager() {
 
   const completeTask = async (id: string) => {
     if (!session) return;
-    await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-tasks/${id}/complete`, {
+    await fetch(`${API_URL}/staff-tasks/${id}/complete`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${session.access_token}`

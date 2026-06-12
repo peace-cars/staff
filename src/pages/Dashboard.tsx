@@ -12,6 +12,7 @@ import { ModernLeadCard } from '../components/ui/ModernLeadCard';
 import NegotiationWidget from '../components/NegotiationWidget';
 import { cn } from '../lib/utils';
 import { fetchWithCache, apiCache } from '../lib/cache';
+import { API_URL } from '../lib/api';
 import { InspectionReportView } from '../components/ui/InspectionReportView';
 import { SkeletonCard } from '../components/ui/Skeleton';
 
@@ -28,8 +29,8 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
   // Attempt synchronous cache read to prevent UI flicker
   const initialSyncState = (() => {
     if (!session) return true;
-    const perfCached = apiCache.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-performance/me_GET_""`);
-    const leadsCached = apiCache.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests/me_GET_""`);
+    const perfCached = apiCache.get(`${API_URL}/staff-performance/me_GET_""`);
+    const leadsCached = apiCache.get(`${API_URL}/trade-in-requests/me_GET_""`);
     return !(perfCached && leadsCached);
   })();
 
@@ -60,7 +61,7 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
       }
     };
 
-    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-performance/me`, { headers }, (data) => {
+    fetchWithCache(`${API_URL}/staff-performance/me`, { headers }, (data) => {
       setProfile((prev: any) => ({ ...prev, ...data }));
       loadedPerf = true;
       completeSync();
@@ -70,7 +71,7 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
       completeSync();
     });
 
-    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests/me`, { headers }, (data) => {
+    fetchWithCache(`${API_URL}/trade-in-requests/me`, { headers }, (data) => {
       setLeads(Array.isArray(data) ? data : []);
       loadedLeads = true;
       completeSync();

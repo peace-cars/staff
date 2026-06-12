@@ -17,6 +17,7 @@ import { initializePushNotifications } from './lib/push';
 import { CapacitorBackButtonHandler } from './components/ui/CapacitorBackButtonHandler';
 import { PwaInstallPrompt } from './components/ui/PwaInstallPrompt';
 import { Capacitor } from '@capacitor/core';
+import { apiFetch } from './lib/api';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -33,13 +34,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const fetchNotifications = async () => {
       if (!session?.user?.id) return;
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications`, {
-          headers: { Authorization: `Bearer ${session.access_token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) setNotifications(data);
-        }
+        const data = await apiFetch<any[]>('/notifications');
+        if (Array.isArray(data)) setNotifications(data);
       } catch (e) {
         console.error("Notifications Sync Failed", e);
       }
@@ -52,9 +48,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const handleMarkAllRead = async () => {
     if (!session) return;
     try {
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications/mark-all-read`, {
+      await apiFetch('/notifications/mark-all-read', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` }
+        body: JSON.stringify({ recipientId: session.user.id })
       });
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     } catch (e) {
