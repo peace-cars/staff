@@ -27,7 +27,7 @@
 .dark {
   /* Premium OLED Pitch Black — Real Dark (Slate-Free) */
   --color-bg: #000000;
-  --color-bg-base: #000000;
+  --color-bg-base: #0f172a;
   --color-bg-sidebar: #0A0A0A;
   --color-surface-card: #0D0D0D;
   --color-surface-hover: #171717;

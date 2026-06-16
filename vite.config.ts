@@ -15,8 +15,8 @@ export default defineConfig({
         name: 'PeaceCars Staff',
         short_name: 'PC Staff',
         description: 'Staff Application for PeaceCars',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        theme_color: '#2563EB',
+        background_color: '#2563EB',
         display: 'standalone',
         icons: [
           {
