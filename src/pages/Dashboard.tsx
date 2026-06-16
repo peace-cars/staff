@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Award, Star } from 'lucide-react';
+import { Activity, Award, Star, CheckCircle2, MessageCircle, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../lib/auth';
 import TasksManager from '../components/TasksManager';
@@ -37,6 +37,8 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
   const [isSyncing, setIsSyncing] = useState(initialSyncState);
   const [leadTab, setLeadTab] = useState<'TASKS' | 'COMPLETED'>('TASKS');
   const [selectedCompletedLead, setSelectedCompletedLead] = useState<any>(null);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [activeConvs, setActiveConvs] = useState(0);
 
   useEffect(() => {
     if (!session) return;
@@ -81,6 +83,15 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
       completeSync();
     });
 
+    // Fetch alerts & messages counts
+    fetchWithCache(`${API_URL}/notifications?recipientId=${session.user.id}`, { headers }, (data) => {
+      if (Array.isArray(data)) setUnreadAlerts(data.filter(n => !n.isRead).length);
+    }).catch(console.error);
+
+    fetchWithCache(`${API_URL}/messages/conversations`, { headers }, (data) => {
+      if (Array.isArray(data)) setActiveConvs(data.length);
+    }).catch(console.error);
+
   }, [session]);
 
   if (isSyncing) return (
@@ -108,54 +119,98 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
   const displayLeads = leadTab === 'TASKS' ? activeTasks : completedTasks;
 
   const renderLeads = () => (
-    <div className="space-y-8 pb-12">
-      <div className="flex flex-col gap-1">
-         <h1 className="text-3xl font-bold text-text-main tracking-tight">Lead Pipeline</h1>
-         <p className="text-text-secondary text-[11px] font-bold uppercase tracking-wider opacity-70">Operational Dashboard • {profile?.location || 'Main'} Branch</p>
+    <div className="flex flex-col h-full">
+      {/* Fixed Title Container */}
+      <div className="shrink-0 pb-5 z-40 bg-bg-base/90 backdrop-blur-xl">
+         <h1 className="text-[32px] sm:text-[36px] font-black text-text-main tracking-tight leading-none mb-1">Dashboard</h1>
+         <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest opacity-70">
+           Operational Dashboard • {profile?.location || 'Main'} Branch
+         </p>
       </div>
 
-      <NegotiationWidget />
+      {/* Scrolling Content Container */}
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
+        <div className="space-y-6">
+          
+          {/* Dashboard Overview Snippets */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="bg-surface-card border border-border-subtle rounded-2xl p-3 flex flex-col items-center justify-center text-center shadow-sm">
+              <div className="w-8 h-8 rounded-full bg-primary-main/10 flex items-center justify-center mb-1.5">
+                <CheckCircle2 size={14} className="text-primary-main" />
+              </div>
+              <p className="text-[18px] font-black text-text-main leading-none">{profile?.total_completed_tasks ?? 0}</p>
+              <p className="text-[9px] font-bold text-text-muted uppercase tracking-wider mt-1">Inspections</p>
+            </div>
+            
+            <div 
+              onClick={() => navigate('/messages')}
+              className="bg-surface-card border border-border-subtle rounded-2xl p-3 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden cursor-pointer hover:border-blue-500/30 transition-colors"
+            >
+              <div className="absolute top-0 right-0 w-12 h-12 bg-blue-500/10 rounded-bl-[40px]" />
+              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center mb-1.5 z-10">
+                <MessageCircle size={14} className="text-blue-500" />
+              </div>
+              <p className="text-[18px] font-black text-text-main leading-none z-10">{activeConvs}</p>
+              <p className="text-[9px] font-bold text-text-muted uppercase tracking-wider mt-1 z-10">Messages</p>
+            </div>
 
-      <div className="flex bg-surface-card border border-border-subtle p-1 rounded-xl w-full max-w-sm shadow-sm">
-         <button 
-           onClick={() => setLeadTab('TASKS')}
-           className={cn(
-             "flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
-             leadTab === 'TASKS' ? "bg-primary-main text-white shadow-sm" : "text-text-secondary hover:bg-bg-base"
-           )}
-         >
-           Active Tasks ({activeTasks.length})
-         </button>
-         <button 
-           onClick={() => setLeadTab('COMPLETED')}
-           className={cn(
-             "flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
-             leadTab === 'COMPLETED' ? "bg-primary-main text-white shadow-sm" : "text-text-secondary hover:bg-bg-base"
-           )}
-         >
-           Completed ({completedTasks.length})
-         </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {displayLeads.length === 0 ? (
-          <div className="py-24 text-center border-2 border-dashed border-border-subtle rounded-3xl bg-surface-card">
-            <Activity size={32} className="mx-auto text-text-muted/30 mb-4" />
-            <p className="text-text-muted font-bold uppercase tracking-wider text-[10px]">No active leads found in this category.</p>
+            <div 
+              onClick={() => navigate('/notifications')}
+              className="bg-surface-card border border-border-subtle rounded-2xl p-3 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden cursor-pointer hover:border-rose-500/30 transition-colors"
+            >
+              <div className="absolute top-0 right-0 w-12 h-12 bg-rose-500/10 rounded-bl-[40px]" />
+              <div className="w-8 h-8 rounded-full bg-rose-500/10 flex items-center justify-center mb-1.5 z-10">
+                <Bell size={14} className="text-rose-500" />
+              </div>
+              <p className="text-[18px] font-black text-text-main leading-none z-10">{unreadAlerts}</p>
+              <p className="text-[9px] font-bold text-text-muted uppercase tracking-wider mt-1 z-10">Alerts</p>
+            </div>
           </div>
-        ) : displayLeads.map(lead => (
-          <ModernLeadCard 
-            key={lead.id} 
-            lead={lead} 
-            onClick={() => {
-              if (leadTab === 'COMPLETED') {
-                setSelectedCompletedLead(lead);
-              } else {
-                navigate(`/eval/${lead.id}`);
-              }
-            }}
-          />
-        ))}
+
+          <NegotiationWidget />
+
+          <div className="sticky top-0 z-30 flex bg-surface-card/60 backdrop-blur-2xl border border-border-subtle p-1 rounded-[16px] w-full max-w-sm shadow-sm mb-4">
+               <button 
+                 onClick={() => setLeadTab('TASKS')}
+                 className={cn(
+                   "flex-1 py-2.5 rounded-[12px] text-[11px] font-bold uppercase tracking-wider transition-all",
+                   leadTab === 'TASKS' ? "bg-primary-main text-white shadow-md shadow-primary-main/20" : "text-text-secondary hover:bg-bg-secondary/50"
+                 )}
+               >
+                 Active Tasks ({activeTasks.length})
+               </button>
+               <button 
+                 onClick={() => setLeadTab('COMPLETED')}
+                 className={cn(
+                   "flex-1 py-2.5 rounded-[12px] text-[11px] font-bold uppercase tracking-wider transition-all",
+                   leadTab === 'COMPLETED' ? "bg-primary-main text-white shadow-md shadow-primary-main/20" : "text-text-secondary hover:bg-bg-secondary/50"
+                 )}
+               >
+                 Completed ({completedTasks.length})
+               </button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 pb-12">
+            {displayLeads.length === 0 ? (
+              <div className="col-span-full py-24 text-center border-2 border-dashed border-border-subtle rounded-[24px] bg-surface-card/50">
+                <Activity size={32} className="mx-auto text-text-muted/30 mb-4" />
+                <p className="text-text-muted font-bold uppercase tracking-wider text-[10px]">No active leads found in this category.</p>
+              </div>
+            ) : displayLeads.map(lead => (
+              <ModernLeadCard 
+                key={lead.id} 
+                lead={lead} 
+                onClick={() => {
+                  if (leadTab === 'COMPLETED') {
+                    setSelectedCompletedLead(lead);
+                  } else {
+                    navigate(`/eval/${lead.id}`);
+                  }
+                }}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -163,7 +218,7 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
 
 
   return (
-    <div className="pb-24">
+    <div className="flex flex-col h-full w-full min-h-0">
       {activeTab === 'leads' && renderLeads()}
       {activeTab === 'sourcing' && <SourcingModule />}
       {activeTab === 'tasks' && <TasksManager />}

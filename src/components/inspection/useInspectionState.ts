@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/auth';
 import { unwrapApiResponse } from '../../lib/api';
 import confetti from 'canvas-confetti';
 import localforage from 'localforage';
+import { fetchWithCache } from '../../lib/cache';
 
 export interface InspectionPoint {
   id: string;
@@ -298,30 +299,22 @@ export function useInspectionState(leadId: string | undefined) {
     if (!session) return;
     const headers = { 'Authorization': `Bearer ${session.access_token}` };
 
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-performance/me`, { headers })
-      .then(r => r.json())
-      .then(setProfile)
-      .catch(console.error);
+    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-performance/me`, { headers }, (data) => {
+      setProfile(data);
+    }).catch(console.error);
 
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests/${leadId}`, { headers })
-      .then(r => {
-        if (!r.ok) throw new Error(`Access denied (${r.status})`);
-        return r.json();
-      })
-      .then(data => setLead(unwrapApiResponse(data)))
-      .catch(err => {
-        console.error(err);
-        setFetchError(err.message);
-      });
+    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests/${leadId}`, { headers }, (data) => {
+      setLead(data);
+    }).catch(err => {
+      console.error(err);
+      setFetchError(err.message || 'Access denied');
+    });
 
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/settings`, { headers })
-      .then(r => r.json())
-      .then(settings => {
-        if (settings.evaluation_commission_percent) {
-          setCommRate(parseFloat(settings.evaluation_commission_percent));
-        }
-      })
-      .catch(console.error);
+    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/settings`, { headers }, (settings) => {
+      if (settings.evaluation_commission_percent) {
+        setCommRate(parseFloat(settings.evaluation_commission_percent));
+      }
+    }).catch(console.error);
   }, [session, leadId]);
 
   const updatePoint = useCallback((category: string, id: string, updates: Partial<InspectionPoint>) => {

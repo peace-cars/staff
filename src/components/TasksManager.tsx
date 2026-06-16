@@ -9,6 +9,7 @@ import { cn } from '../lib/utils';
 import { fetchWithCache } from '../lib/cache';
 import { InspectionReportView } from './ui/InspectionReportView';
 import { API_URL } from '../lib/api';
+import { SkeletonCard } from './ui/Skeleton';
 
 export default function TasksManager() {
   const navigate = useNavigate();
@@ -88,9 +89,21 @@ export default function TasksManager() {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-20 gap-4">
-       <div className="w-10 h-10 border-4 border-primary-main/20 border-t-primary-main rounded-full animate-spin" />
-       <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Updating task queue...</p>
+    <div className="flex flex-col h-full space-y-6 pt-6">
+      <div className="flex flex-col gap-1">
+         <div className="h-10 w-64 rounded bg-border-subtle/40 animate-pulse" />
+         <div className="h-4 w-48 rounded bg-border-subtle/40 animate-pulse mt-2" />
+      </div>
+      <div className="flex gap-2 mb-2">
+         <div className="h-10 w-24 rounded-lg bg-border-subtle/40 animate-pulse" />
+         <div className="h-10 w-24 rounded-lg bg-border-subtle/40 animate-pulse" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
     </div>
   );
 
@@ -99,13 +112,16 @@ export default function TasksManager() {
   const displayTasks = activeTab === 'active' ? activeTasks : completedTasks;
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex flex-col gap-1">
-         <h1 className="text-2xl font-bold text-text-main tracking-tight">Inspection Tasks</h1>
-         <p className="text-text-secondary text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+    <div className="flex flex-col h-full">
+      <div className="shrink-0 pb-5 z-40 bg-bg-base/90 backdrop-blur-xl">
+         <h1 className="text-[32px] sm:text-[36px] font-black text-text-main tracking-tight leading-none mb-1">Inspection Tasks</h1>
+         <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 opacity-70">
             <Target size={14} className="text-text-muted" /> Assigned Evaluations & Field Tasks
          </p>
       </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
+        <div className="space-y-6">
 
       {/* Tabs */}
       <div className="flex bg-surface-card border border-border-subtle p-1 rounded-xl w-full max-w-sm shadow-sm">
@@ -129,7 +145,7 @@ export default function TasksManager() {
          </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
         {displayTasks.length === 0 ? (
           <div className="py-16 text-center border-2 border-dashed border-border-subtle rounded-2xl bg-surface-card flex flex-col items-center gap-3">
             <Activity size={32} className="text-text-muted/20" />
@@ -152,17 +168,17 @@ export default function TasksManager() {
               )}
             >
               {/* Task Card with Photo */}
-              <div className="flex gap-0">
+              <div className="flex flex-col sm:flex-row gap-0 h-full">
                 {/* Vehicle Photo */}
-                <div className="w-28 sm:w-36 shrink-0 bg-bg-base overflow-hidden relative">
+                <div className="w-full sm:w-36 h-32 sm:h-full shrink-0 bg-bg-base overflow-hidden relative border-b sm:border-b-0 sm:border-r border-border-subtle/20">
                   {photo ? (
                     <img 
                       src={photo} 
                       alt={vehicleName} 
-                      className="w-full h-full object-cover min-h-[140px]" 
+                      className="w-full h-full object-cover sm:min-h-[140px]" 
                     />
                   ) : (
-                    <div className="w-full h-full min-h-[140px] flex flex-col items-center justify-center gap-1 text-text-muted/25">
+                    <div className="w-full h-full sm:min-h-[140px] flex flex-col items-center justify-center gap-1 text-text-muted/25">
                       <CarFront size={28} />
                       <span className="text-[7px] font-bold uppercase tracking-widest">No Photo</span>
                     </div>
@@ -181,33 +197,33 @@ export default function TasksManager() {
                 </div>
 
                 {/* Task Content */}
-                <div className="flex-1 p-3 sm:p-4 flex flex-col gap-2 min-w-0">
+                <div className="flex-1 p-2.5 sm:p-4 flex flex-col gap-1.5 sm:gap-2 min-w-0">
                   {/* Header: Status */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-surface-hover border border-border-subtle rounded-lg text-[8px] font-bold text-text-secondary uppercase tracking-widest">
-                       <Clock size={9} /> {task.status?.replace(/_/g, ' ')}
+                    <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 bg-surface-hover border border-border-subtle rounded-md sm:rounded-lg text-[8px] font-bold text-text-secondary uppercase tracking-widest leading-none">
+                       <Clock size={8} className="sm:w-[9px] sm:h-[9px]" /> {task.status?.replace(/_/g, ' ')}
                     </div>
-                    {isCompleted && <ShieldCheck size={16} className="text-emerald-500" />}
+                    {isCompleted && <ShieldCheck size={14} className="text-emerald-500" />}
                   </div>
 
                   {/* Vehicle Title */}
-                  <h3 className="text-[14px] font-bold text-text-main tracking-tight leading-tight">
+                  <h3 className="text-[13px] sm:text-[14px] font-bold text-text-main tracking-tight leading-tight truncate">
                     {vehicleName}
                   </h3>
 
                   {/* Customer info if available */}
                   {linkedLead && (
-                    <div className="flex items-center gap-3 text-[10px] text-text-secondary font-bold">
-                      <span className="flex items-center gap-1 truncate">
-                        <User size={10} className="shrink-0 text-text-muted" />
-                        {linkedLead.customer}
+                    <div className="flex items-center gap-1 sm:gap-3 text-[9px] sm:text-[10px] text-text-secondary font-bold truncate">
+                      <span className="flex items-center gap-1 truncate shrink">
+                        <User size={9} className="shrink-0 text-text-muted" />
+                        <span className="truncate">{linkedLead.customer}</span>
                       </span>
                       {linkedLead.phone && (
                         <>
-                          <span className="w-0.5 h-0.5 bg-border-subtle rounded-full shrink-0" />
-                          <span className="flex items-center gap-1 shrink-0 text-primary-main">
-                            <Phone size={10} className="shrink-0" />
-                            {linkedLead.phone}
+                          <span className="hidden sm:block w-0.5 h-0.5 bg-border-subtle rounded-full shrink-0" />
+                          <span className="flex items-center gap-0.5 sm:gap-1 shrink-0 text-primary-main">
+                            <Phone size={9} className="shrink-0" />
+                            <span className="truncate">{linkedLead.phone}</span>
                           </span>
                         </>
                       )}
@@ -289,12 +305,13 @@ export default function TasksManager() {
          </div>
       </div>
 
-      {/* Report View for completed tasks */}
       <InspectionReportView 
         isOpen={!!selectedCompletedTask}
         onClose={() => setSelectedCompletedTask(null)}
         lead={selectedCompletedTask}
       />
+        </div>
+      </div>
     </div>
   );
 }

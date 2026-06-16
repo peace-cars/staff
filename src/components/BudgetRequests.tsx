@@ -6,6 +6,7 @@ import {
 import ImageUpload from './ImageUpload';
 import { cn } from '../lib/utils';
 import { fetchWithCache } from '../lib/cache';
+import { SkeletonCard } from './ui/Skeleton';
 
 export default function BudgetRequests() {
   const { session, logout } = useAuth();
@@ -99,20 +100,31 @@ export default function BudgetRequests() {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-20 gap-3">
-      <div className="w-10 h-10 border-4 border-primary-main/20 border-t-primary-main rounded-full animate-spin" />
-      <p className="text-text-muted font-bold uppercase tracking-wider text-[9px]">Loading budget data...</p>
+    <div className="flex flex-col h-full space-y-6 pt-6">
+      <div className="flex flex-col gap-1 mb-8">
+         <div className="h-10 w-64 rounded bg-border-subtle/40 animate-pulse" />
+         <div className="h-4 w-48 rounded bg-border-subtle/40 animate-pulse mt-2" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
     </div>
   );
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-text-main tracking-tight">Finance Requests</h1>
-        <p className="text-text-secondary text-[10px] font-bold uppercase tracking-wider leading-none flex items-center gap-2 mt-1">
+    <div className="flex flex-col h-full">
+      <div className="shrink-0 pb-5 z-40 bg-bg-base/90 backdrop-blur-xl">
+        <h1 className="text-[32px] sm:text-[36px] font-black text-text-main tracking-tight leading-none mb-1">Finance Requests</h1>
+        <p className="text-text-secondary text-[10px] font-bold uppercase tracking-wider leading-none flex items-center gap-2 mt-1 opacity-70">
           <DollarSign size={14} /> Operational Funding
         </p>
       </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
+        <div className="space-y-6">
 
       <div className="native-card p-6 space-y-6 bg-surface-card">
         <h4 className="text-sm font-bold text-text-main tracking-tight uppercase tracking-wider">New Funding Request</h4>
@@ -179,9 +191,9 @@ export default function BudgetRequests() {
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
         {budgets.length === 0 ? (
-          <div className="py-20 text-center border-2 border-dashed border-border-subtle rounded-3xl bg-bg-base/50">
+          <div className="col-span-full py-20 text-center border-2 border-dashed border-border-subtle rounded-3xl bg-bg-base/50">
             <Clock size={28} className="mx-auto text-text-muted/20 mb-3" />
             <p className="text-text-muted font-bold uppercase tracking-wider text-[9px]">No funding requests yet</p>
           </div>
@@ -189,45 +201,47 @@ export default function BudgetRequests() {
           const colors = getStatusColor(b.status);
           return (
             <div key={b.id} className={cn(
-              "native-card p-5 transition-all relative overflow-hidden bg-surface-card",
+              "native-card p-3 sm:p-5 transition-all relative overflow-hidden bg-surface-card flex flex-col h-full",
               b.status === 'DISBURSED' ? 'opacity-60 grayscale-[0.2]' : ''
             )}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border", colors.bg, colors.text, colors.border)}>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 flex-1">
+                <div className="flex items-center gap-2.5 sm:gap-4 w-full">
+                  <div className={cn("w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 border", colors.bg, colors.text, colors.border)}>
                     {getStatusIcon(b.status)}
                   </div>
-                  <div className="min-w-0">
-                    <h4 className="text-sm font-bold text-text-main tracking-tight truncate">{b.purpose}</h4>
-                    <div className="flex items-center gap-3 mt-1">
-                      <p className="text-primary-main font-bold text-[12px]">
-                        {(b.amount_approved || b.amount_requested || 0).toLocaleString()} <span className="text-[8px] text-text-muted font-bold uppercase">ETB</span>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-[12px] sm:text-sm font-bold text-text-main tracking-tight truncate">{b.purpose}</h4>
+                    <div className="flex items-center gap-1.5 sm:gap-3 mt-0.5 sm:mt-1">
+                      <p className="text-primary-main font-bold text-[11px] sm:text-[12px] truncate">
+                        {(b.amount_approved || b.amount_requested || 0).toLocaleString()} <span className="text-[7px] sm:text-[8px] text-text-muted font-bold uppercase">ETB</span>
                       </p>
-                      <span className="w-1 h-1 bg-border-subtle rounded-full" />
-                      <p className="text-[8px] text-text-muted font-bold uppercase tracking-wider">ID: {b.id?.substring(0,6)}</p>
+                      <span className="hidden sm:block w-1 h-1 bg-border-subtle rounded-full shrink-0" />
+                      <p className="text-[7px] sm:text-[8px] text-text-muted font-bold uppercase tracking-wider truncate">ID: {b.id?.substring(0,6)}</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2 shrink-0">
-                  {!b.receipt_url && b.status === 'DISBURSED' && (
-                    <ImageUpload 
-                      bucket="documents" 
-                      folder={`receipts/${session?.user.id}`} 
-                      onUploadComplete={(urls: string[]) => handleUploadReceipt(b.id, urls[0])} 
-                      maxFiles={1}
-                      label="Receipt"
-                    />
-                  )}
-                  {b.receipt_url && (
-                    <button 
-                      onClick={() => window.open(b.receipt_url, '_blank')}
-                      className="p-2 bg-bg-base rounded-lg text-text-muted hover:text-primary-main transition-colors border border-border-subtle"
-                    >
-                      <FileText size={14} />
-                    </button>
-                  )}
-                  <span className={cn("text-[8px] font-bold uppercase tracking-wider px-2 py-1 rounded border", colors.bg, colors.text, colors.border)}>
+                <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2 shrink-0 mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border-subtle/50">
+                  <div className="flex items-center gap-2">
+                    {!b.receipt_url && b.status === 'DISBURSED' && (
+                      <ImageUpload 
+                        bucket="documents" 
+                        folder={`receipts/${session?.user.id}`} 
+                        onUploadComplete={(urls: string[]) => handleUploadReceipt(b.id, urls[0])} 
+                        maxFiles={1}
+                        label="Receipt"
+                      />
+                    )}
+                    {b.receipt_url && (
+                      <button 
+                        onClick={() => window.open(b.receipt_url, '_blank')}
+                        className="p-1.5 sm:p-2 bg-bg-base rounded-lg text-text-muted hover:text-primary-main transition-colors border border-border-subtle"
+                      >
+                        <FileText size={12} className="sm:w-[14px] sm:h-[14px]" />
+                      </button>
+                    )}
+                  </div>
+                  <span className={cn("text-[7px] sm:text-[8px] font-bold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border whitespace-nowrap", colors.bg, colors.text, colors.border)}>
                     {b.status}
                   </span>
                 </div>
@@ -246,6 +260,8 @@ export default function BudgetRequests() {
           <p className="text-[11px] text-text-secondary font-medium leading-relaxed">
             All disbursed funds require receipt documentation within 48 hours. Please ensure accuracy in all submissions.
           </p>
+        </div>
+      </div>
         </div>
       </div>
     </div>

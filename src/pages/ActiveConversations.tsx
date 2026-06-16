@@ -7,6 +7,7 @@ import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { fetchWithCache, apiCache } from '../lib/cache';
 import { unwrapApiResponse } from '../lib/api';
+import { SkeletonCard } from '../components/ui/Skeleton';
 
 export default function ActiveConversations() {
   const { session } = useAuth();
@@ -195,7 +196,8 @@ export default function ActiveConversations() {
   // Mobile: show list or chat, not both
   if (selectedConv) {
     return (
-      <div className="max-md:fixed max-md:inset-0 max-md:z-[150] max-md:bg-bg-base max-md:flex max-md:flex-col md:flex md:flex-col md:h-[calc(100vh-210px)] md:max-h-[calc(100vh-210px)] animate-in fade-in duration-300">
+      <div className="flex flex-col h-full min-h-0 max-md:fixed max-md:inset-0 max-md:z-[150] max-md:bg-bg-base animate-in fade-in duration-300">
+        <style>{`#bottom-nav { display: none !important; }`}</style>
         {/* Chat Header */}
         <div className="flex items-center gap-3 pb-4 border-b border-border-subtle max-md:pt-[calc(28px+env(safe-area-inset-top,20px))] max-md:px-4 max-md:pb-3 max-md:bg-surface-card max-md:shadow-sm">
           <button 
@@ -252,7 +254,7 @@ export default function ActiveConversations() {
         </div>
 
         {/* Input */}
-        <div className="pt-3 border-t border-border-subtle max-md:px-4 max-md:pb-[calc(12px+env(safe-area-inset-bottom,16px))] max-md:bg-surface-card max-md:pt-3">
+        <div className="shrink-0 pt-3 pb-[calc(12px+env(safe-area-inset-bottom,16px))] border-t border-border-subtle max-md:px-4 max-md:bg-surface-card max-md:pt-3">
           <form onSubmit={handleSend} className="relative">
             <input
               value={inputText}
@@ -279,13 +281,16 @@ export default function ActiveConversations() {
 
   // Conversation List View
   return (
-    <div className="space-y-5 pb-12 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-text-main tracking-tight">Messages</h1>
-        <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest leading-none">
+    <div className="flex flex-col h-full min-h-0 animate-in fade-in duration-500">
+      <div className="shrink-0 pb-5 z-40 bg-bg-base/90 backdrop-blur-xl flex flex-col gap-1">
+        <h1 className="text-[32px] sm:text-[36px] font-black text-text-main tracking-tight leading-none mb-1">Messages</h1>
+        <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest leading-none opacity-70">
           Client Communications
         </p>
       </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
+        <div className="space-y-5">
 
       {/* Search */}
       <div className="relative">
@@ -300,9 +305,11 @@ export default function ActiveConversations() {
 
       {/* List */}
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <div className="w-10 h-10 border-2 border-primary-subtle border-t-primary-main rounded-full animate-spin" />
-          <p className="text-text-muted font-bold uppercase tracking-widest text-[9px]">Loading...</p>
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : filteredConvs.length === 0 ? (
         <div className="py-24 text-center native-card bg-surface-card border-dashed">
@@ -342,6 +349,8 @@ export default function ActiveConversations() {
           ))}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -87,10 +87,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setLoading(false);
               return;
             } else {
-              console.warn('[Staff Auth] Refresh failed, logging out');
-              localStorage.removeItem('staff_session');
-              localStorage.removeItem('staffId');
-              setSession(null);
+              console.warn(`[Staff Auth] Refresh failed with status ${res.status}`);
+              if (res.status === 401 || res.status === 403 || res.status === 400) {
+                console.warn('[Staff Auth] Token invalid, logging out');
+                localStorage.removeItem('staff_session');
+                localStorage.removeItem('staffId');
+                setSession(null);
+              } else {
+                console.warn('[Staff Auth] Server error during refresh, keeping stale session');
+                setSession(parsed);
+              }
               // Fall through so setLoading(false) is reached below
             }
           } else {
@@ -98,7 +104,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } catch (e) {
           console.error('[Staff Auth] Init error:', e);
-          localStorage.removeItem('staff_session');
+          if (e instanceof SyntaxError) {
+            localStorage.removeItem('staff_session');
+          } else {
+            setSession(JSON.parse(stored));
+          }
         }
       }
       setLoading(false);

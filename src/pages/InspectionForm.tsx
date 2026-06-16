@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ShieldAlert, ChevronLeft, AlertTriangle, Activity, ShieldCheck, Zap, Loader2, X, Image as ImageIcon } from 'lucide-react';
+import { ShieldAlert, ChevronLeft, AlertTriangle, Activity, ShieldCheck, Zap, Loader2, X, Image as ImageIcon, FileText } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useInspectionState } from '../components/inspection/useInspectionState';
 import { InspectionVehicleCard } from '../components/inspection/InspectionVehicleCard';
@@ -29,9 +29,12 @@ export default function InspectionForm() {
   // Previously only gated on !profile, causing a "Registry Lock" flash if profile arrived
   // before the lead fetch completed.
   if ((!profile || !lead) && !fetchError) return (
-    <div className="min-h-screen bg-bg-base flex items-center justify-center gap-3">
-      <div className="w-5 h-5 border-2 border-primary-main/10 border-t-primary-main rounded-full animate-spin" />
-      <span className="text-text-muted font-bold uppercase tracking-widest text-[9px]">Synchronizing...</span>
+    <div className="min-h-screen bg-bg-base flex flex-col p-6 animate-pulse">
+      <div className="h-10 w-full max-w-[200px] bg-border-subtle/40 rounded-xl mb-6" />
+      <div className="h-64 w-full bg-border-subtle/30 rounded-[24px] mb-4" />
+      <div className="h-12 w-full bg-border-subtle/30 rounded-2xl mb-2" />
+      <div className="h-12 w-full bg-border-subtle/30 rounded-2xl mb-2" />
+      <div className="h-12 w-full bg-border-subtle/30 rounded-2xl mb-2" />
     </div>
   );
 
@@ -111,8 +114,8 @@ export default function InspectionForm() {
         </div>
       </header>
 
-      <main className="flex-1 p-3 sm:p-4 md:p-8 w-full max-w-7xl mx-auto space-y-5">
-        <div className="flex flex-col lg:flex-row lg:gap-8 gap-5 items-start">
+      <main className="flex-1 px-0 py-4 sm:px-2 md:px-4 md:py-6 w-full mx-auto">
+        <div className="flex flex-col lg:flex-row lg:gap-4 gap-4 items-start">
           <div className="w-full lg:w-7/12">
             <InspectionVehicleCard leadId={leadId} lead={lead} setSelectedGalleryPhoto={setSelectedGalleryPhoto} commRate={commRate} />
           </div>
@@ -141,20 +144,7 @@ export default function InspectionForm() {
         setUploadError={setUploadError}
       />
 
-      <div className="fixed bottom-0 left-0 right-0 bg-surface-card/90 backdrop-blur-xl border-t border-border-subtle p-4 z-40 md:hidden flex justify-center gap-10">
-         <div className="flex flex-col items-center">
-            <Activity size={18} className={activeSheet === 'mechanical' ? 'text-primary-main' : 'text-text-muted'} />
-            <span className="text-[8px] font-black uppercase mt-1 text-text-secondary">Score</span>
-         </div>
-         <div className="flex flex-col items-center">
-            <ShieldCheck size={18} className={activeSheet === 'exterior' ? 'text-primary-main' : 'text-text-muted'} />
-            <span className="text-[8px] font-black uppercase mt-1 text-text-secondary">Armor</span>
-         </div>
-         <div className="flex flex-col items-center">
-            <Zap size={18} className={activeSheet === 'ev' ? 'text-primary-main' : 'text-text-muted'} />
-            <span className="text-[8px] font-black uppercase mt-1 text-text-secondary">Power</span>
-         </div>
-      </div>
+
 
       {selectedGalleryPhoto && (
         <div 

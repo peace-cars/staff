@@ -10,6 +10,7 @@ import { cn } from '../lib/utils';
 import ImageUpload from './ImageUpload';
 import { fetchWithCache } from '../lib/cache';
 import { unwrapApiResponse } from '../lib/api';
+import { SkeletonCard } from './ui/Skeleton';
 
 export default function InventoryModule() {
   const { session } = useAuth();
@@ -123,12 +124,11 @@ export default function InventoryModule() {
   );
 
     return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-12">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="flex flex-col h-full animate-in fade-in duration-500">
+      <div className="shrink-0 pb-5 z-40 bg-bg-base/90 backdrop-blur-xl flex justify-between items-center">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-text-main tracking-tight">Node Inventory</h1>
-          <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest leading-none flex items-center gap-2">
+          <h1 className="text-[32px] sm:text-[36px] font-black text-text-main tracking-tight leading-none mb-1">Node Inventory</h1>
+          <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest leading-none flex items-center gap-2 opacity-70">
             <Building2 size={14} className="text-primary-main" /> Regional Assets Control
           </p>
         </div>
@@ -139,6 +139,9 @@ export default function InventoryModule() {
           <Plus size={20} />
         </button>
       </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
+        <div className="space-y-6">
 
       {/* Search & Stats */}
       <div className="space-y-3">
@@ -164,14 +167,16 @@ export default function InventoryModule() {
       </div>
 
       {/* Vehicle List */}
-      <div className="space-y-3">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
         {isLoading ? (
-          <div className="py-20 flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-2 border-primary-subtle border-t-primary-main rounded-full animate-spin" />
-            <p className="text-text-muted font-bold uppercase tracking-widest text-[9px]">Syncing Matrix...</p>
-          </div>
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
         ) : filteredVehicles.length === 0 ? (
-          <div className="py-20 text-center native-card bg-surface-card border-dashed border-border-subtle">
+          <div className="col-span-full py-20 text-center native-card bg-surface-card border-dashed border-border-subtle">
             <Package className="mx-auto mb-3 text-text-muted/30" size={32} />
             <p className="text-text-muted font-bold uppercase tracking-widest text-[9px]">No units at this coordinate</p>
           </div>
@@ -179,26 +184,28 @@ export default function InventoryModule() {
           filteredVehicles.map(vehicle => (
             <div 
               key={vehicle.id}
-              className="native-card p-5 group transition-all hover:scale-[1.01] bg-surface-card shadow-lg shadow-black/5"
+              className="native-card p-3 sm:p-5 group transition-all hover:scale-[1.01] bg-surface-card shadow-lg shadow-black/5 flex flex-col h-full"
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 bg-surface-hover rounded-xl flex items-center justify-center text-primary-main group-hover:scale-105 transition-transform">
-                    {vehicle.fuel === 'ELECTRIC' ? <Zap size={18} /> : <Fuel size={18} />}
+              <div className="flex flex-col sm:flex-row justify-between items-start mb-3 sm:mb-4 gap-2 flex-1">
+                <div className="flex gap-2 sm:gap-3 w-full">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-surface-hover rounded-xl flex items-center justify-center text-primary-main group-hover:scale-105 transition-transform shrink-0">
+                    {vehicle.fuel === 'ELECTRIC' ? <Zap size={14} className="sm:w-[18px] sm:h-[18px]" /> : <Fuel size={14} className="sm:w-[18px] sm:h-[18px]" />}
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-text-main tracking-tight leading-tight group-hover:text-primary-main transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-[12px] sm:text-base font-bold text-text-main tracking-tight leading-tight group-hover:text-primary-main transition-colors truncate">
                       {vehicle.make} {vehicle.model}
                     </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest">{vehicle.year}</span>
-                      <span className="w-1 h-1 bg-border-subtle rounded-full" />
-                      <span className="text-primary-main text-[9px] font-bold uppercase tracking-wider">{vehicle.duty === 'DUTY_PAID' ? 'Tax Paid' : vehicle.duty === 'DUTY_FREE' ? 'Tax Exempt' : vehicle.duty?.replace('_', ' ')}</span>
+                    <div className="flex items-center gap-1 sm:gap-2 mt-0.5 sm:mt-1">
+                      <span className="text-[8px] sm:text-[9px] font-bold text-text-muted uppercase tracking-widest truncate">{vehicle.year}</span>
+                      <span className="w-1 h-1 bg-border-subtle rounded-full shrink-0" />
+                      <span className="text-primary-main text-[8px] sm:text-[9px] font-bold uppercase tracking-wider truncate">
+                        {vehicle.duty === 'DUTY_PAID' ? 'Tax Paid' : vehicle.duty === 'DUTY_FREE' ? 'Tax Exempt' : vehicle.duty?.replace('_', ' ')}
+                      </span>
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-base font-bold text-text-main tracking-tight">{(vehicle.retail_price_etb || 0).toLocaleString()} <span className="text-[9px] text-text-muted">ETB</span></p>
+                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto mt-1 sm:mt-0 gap-2 sm:gap-1.5 shrink-0">
+                  <p className="text-[13px] sm:text-base font-bold text-text-main tracking-tight whitespace-nowrap">{(vehicle.retail_price_etb || 0).toLocaleString()} <span className="text-[8px] sm:text-[9px] text-text-muted">ETB</span></p>
                   <select
                     value={vehicle.status}
                     onChange={(e) => updateVehicleStatus(vehicle.id, e.target.value)}
@@ -218,14 +225,14 @@ export default function InventoryModule() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-border-subtle">
-                <div className="flex items-center gap-2">
-                  <Activity size={12} className="text-text-muted/50" />
-                  <span className="text-[9px] font-bold text-text-secondary uppercase tracking-wider">VIN: {vehicle.vin_chassis || 'N/A'}</span>
+              <div className="flex items-center justify-between pt-2 sm:pt-3 mt-auto border-t border-border-subtle">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 truncate">
+                  <Activity size={10} className="text-text-muted/50 sm:w-[12px] sm:h-[12px] shrink-0" />
+                  <span className="text-[8px] sm:text-[9px] font-bold text-text-secondary uppercase tracking-wider truncate">VIN: {vehicle.vin_chassis || 'N/A'}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                   <Building2 size={12} className="text-primary-main/60" />
-                   <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">{vehicle.branches?.name || 'Local'}</span>
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pl-2">
+                   <Building2 size={10} className="text-primary-main/60 sm:w-[12px] sm:h-[12px]" />
+                   <span className="text-[8px] sm:text-[9px] font-bold text-text-muted uppercase tracking-wider truncate">{vehicle.branches?.name || 'Local'}</span>
                 </div>
               </div>
             </div>
@@ -324,6 +331,8 @@ export default function InventoryModule() {
           </div>
         )}
       </AnimatePresence>
+        </div>
+      </div>
     </div>
   );
 }

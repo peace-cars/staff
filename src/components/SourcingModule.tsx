@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ProposeMatchModal from './ProposeMatchModal';
+import { SkeletonCard } from './ui/Skeleton';
 
 const URGENCY_CONFIG: Record<string, { label: string; color: string }> = {
   FLEXIBLE:  { label: 'Flexible',   color: 'text-text-muted' },
@@ -65,9 +66,17 @@ export default function SourcingModule() {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-32 gap-4">
-      <div className="w-10 h-10 border-4 border-primary-main/20 border-t-primary-main rounded-full animate-spin" />
-      <p className="text-text-muted text-[12px] font-bold uppercase tracking-widest">Loading Sourcing Hunts...</p>
+    <div className="flex flex-col h-full space-y-6 pt-6">
+      <div className="flex flex-col gap-1">
+         <div className="h-10 w-64 rounded bg-border-subtle/40 animate-pulse" />
+         <div className="h-4 w-48 rounded bg-border-subtle/40 animate-pulse mt-2" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
     </div>
   );
 
@@ -75,17 +84,16 @@ export default function SourcingModule() {
   const completedRequests = requests.filter(r => ['READY', 'CANCELLED'].includes(r.status));
 
   return (
-    <div className="space-y-8 pb-16 pt-2">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+    <div className="flex flex-col h-full">
+      <div className="shrink-0 pb-5 z-40 bg-bg-base/90 backdrop-blur-xl flex items-start justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-text-main tracking-tight flex items-center gap-2">
+          <h1 className="text-[32px] sm:text-[36px] font-black text-text-main tracking-tight leading-none mb-1 flex items-center gap-2">
             <span className="w-9 h-9 rounded-xl bg-primary-main/10 border border-primary-main/20 flex items-center justify-center">
               <Search size={18} className="text-primary-main" />
             </span>
             Sourcing Hunts
           </h1>
-          <p className="text-text-secondary text-[12px] font-bold uppercase tracking-wider opacity-70">
+          <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest opacity-70">
             {activeRequests.length} active assignment{activeRequests.length !== 1 ? 's' : ''} • Find the perfect match
           </p>
         </div>
@@ -100,6 +108,9 @@ export default function SourcingModule() {
         </button>
       </div>
 
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
+        <div className="space-y-6">
+
       {/* Active Requests */}
       {activeRequests.length === 0 ? (
         <div className="py-24 text-center border-2 border-dashed border-border-subtle rounded-3xl bg-surface-card flex flex-col items-center gap-4">
@@ -112,7 +123,7 @@ export default function SourcingModule() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
           {activeRequests.map(req => {
             const urgency = URGENCY_CONFIG[req.urgency] || URGENCY_CONFIG.FLEXIBLE;
             const statusCfg = STATUS_CONFIG[req.status] || STATUS_CONFIG.ASSIGNED;
@@ -124,30 +135,30 @@ export default function SourcingModule() {
                 key={req.id}
                 className="bg-surface-card border border-border-subtle/50 rounded-xl overflow-hidden shadow-sm hover:border-border-subtle/80 transition-all flex flex-col"
               >
-                <div className="p-3 md:p-4 flex flex-col md:flex-row gap-4 items-start md:items-center">
+                <div className="p-3 sm:p-4 flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center flex-1">
                   {/* Left: Icon & Core Details */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-12 h-12 rounded-xl bg-primary-main/10 border border-primary-main/20 flex items-center justify-center shrink-0">
-                      <Car size={20} className="text-primary-main" />
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full sm:flex-1">
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-primary-main/10 border border-primary-main/20 flex items-center justify-center shrink-0">
+                      <Car size={16} className="text-primary-main sm:w-[20px] sm:h-[20px]" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h3 className="font-black text-[14px] text-text-main leading-tight truncate">{req.make} {req.model}</h3>
-                        <span className={cn('text-[9px] font-bold px-1.5 h-4 flex items-center rounded-md shrink-0', statusCfg.bg, statusCfg.text)}>
+                      <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5">
+                        <h3 className="font-black text-[12px] sm:text-[14px] text-text-main leading-tight truncate">{req.make} {req.model}</h3>
+                        <span className={cn('text-[8px] sm:text-[9px] font-bold px-1.5 h-4 flex items-center rounded-md shrink-0 hidden sm:flex', statusCfg.bg, statusCfg.text)}>
                           {statusCfg.label}
                         </span>
                       </div>
-                      <p className="text-[12px] text-text-muted truncate font-medium">
+                      <p className="text-[10px] sm:text-[12px] text-text-muted truncate font-medium">
                         {req.min_year} – {req.max_year} • {req.fuel_type || 'Any'} • <span className="text-success font-bold">{Number(req.max_budget).toLocaleString()} ETB</span>
                       </p>
-                      <div className="flex items-center gap-2 mt-1 text-[11px]">
-                        <span className={cn('font-bold', urgency.color)}>
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1 text-[9px] sm:text-[11px]">
+                        <span className={cn('font-bold shrink-0', urgency.color)}>
                           ⚡ {urgency.label}
                         </span>
-                        <span className="text-text-muted/60 flex items-center gap-1">
-                          <User size={10} /> {req.customer?.full_name || req.contact_name || '—'}
+                        <span className="text-text-muted/60 flex items-center gap-0.5 sm:gap-1 truncate">
+                          <User size={9} className="shrink-0 sm:w-[10px] sm:h-[10px]" /> <span className="truncate">{req.customer?.full_name || req.contact_name || '—'}</span>
                         </span>
-                        <span className="text-primary-main font-bold">
+                        <span className="text-primary-main font-bold shrink-0">
                           {matchCount} match{matchCount !== 1 ? 'es' : ''}
                         </span>
                       </div>
@@ -155,19 +166,19 @@ export default function SourcingModule() {
                   </div>
 
                   {/* Right: Actions */}
-                  <div className="shrink-0 w-full md:w-auto flex flex-row md:flex-col gap-2 items-center md:items-end border-t md:border-t-0 border-border-subtle/30 pt-3 md:pt-0">
+                  <div className="shrink-0 w-full sm:w-auto flex flex-row sm:flex-col gap-1.5 sm:gap-2 items-center sm:items-end border-t sm:border-t-0 border-border-subtle/30 pt-2 sm:pt-0 mt-auto sm:mt-0">
                     <button
                       onClick={() => setSelectedReq(req)}
-                      className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-primary-main text-white text-[12px] font-bold hover:bg-primary-main/90 transition-all shadow-sm"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-primary-main text-white text-[10px] sm:text-[12px] font-bold hover:bg-primary-main/90 transition-all shadow-sm truncate"
                     >
-                      <PlusCircle size={14} />
-                      Propose Match
+                      <PlusCircle size={12} className="sm:w-[14px] sm:h-[14px]" />
+                      Propose
                     </button>
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : req.id)}
-                      className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-border-subtle bg-bg-secondary text-text-secondary text-[12px] font-bold hover:bg-bg-base transition-all"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-border-subtle bg-bg-secondary text-text-secondary text-[10px] sm:text-[12px] font-bold hover:bg-bg-base transition-all"
                     >
-                      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      {isExpanded ? <ChevronUp size={12} className="sm:w-[14px] sm:h-[14px]" /> : <ChevronDown size={12} className="sm:w-[14px] sm:h-[14px]" />}
                       {isExpanded ? 'Hide' : 'Specs'}
                     </button>
                   </div>
@@ -276,14 +287,14 @@ export default function SourcingModule() {
       {completedRequests.length > 0 && (
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted mb-3">Completed ({completedRequests.length})</p>
-          <div className="space-y-2 opacity-60">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 opacity-60">
             {completedRequests.map(req => (
-              <div key={req.id} className="bg-surface-card border border-border-subtle/30 rounded-xl p-4 flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-[14px] text-text-main">{req.make} {req.model}</p>
-                  <p className="text-[12px] text-text-muted">{req.customer?.full_name || req.contact_name}</p>
+              <div key={req.id} className="bg-surface-card border border-border-subtle/30 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 h-full">
+                <div className="min-w-0">
+                  <p className="font-bold text-[12px] sm:text-[14px] text-text-main truncate">{req.make} {req.model}</p>
+                  <p className="text-[10px] sm:text-[12px] text-text-muted truncate">{req.customer?.full_name || req.contact_name}</p>
                 </div>
-                <span className="text-[11px] font-bold text-success bg-success/10 px-2.5 py-1 rounded-lg">CLOSED</span>
+                <span className="text-[9px] sm:text-[11px] font-bold text-success bg-success/10 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg shrink-0 mt-auto sm:mt-0">CLOSED</span>
               </div>
             ))}
           </div>
@@ -297,6 +308,8 @@ export default function SourcingModule() {
           onSuccess={handleMatchProposed}
         />
       )}
+        </div>
+      </div>
     </div>
   );
 }

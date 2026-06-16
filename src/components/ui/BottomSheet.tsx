@@ -8,10 +8,11 @@ interface BottomSheetProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   height?: 'full' | 'half' | 'auto';
 }
 
-export function BottomSheet({ isOpen, onClose, title, children, height = 'auto' }: BottomSheetProps) {
+export function BottomSheet({ isOpen, onClose, title, children, footer, height = 'auto' }: BottomSheetProps) {
   // Prevent background scrolling when sheet is open
   useEffect(() => {
     if (isOpen) {
@@ -25,16 +26,16 @@ export function BottomSheet({ isOpen, onClose, title, children, height = 'auto' 
   }, [isOpen]);
 
   const heightClass = {
-    full: 'h-[90vh]',
-    half: 'h-[50vh]',
-    auto: 'max-h-[90vh]'
+    full: 'h-[90dvh]',
+    half: 'h-[50dvh]',
+    auto: 'max-h-[90dvh]'
   }[height];
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop (Z-Axis Separation) */}
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -50,7 +51,7 @@ export function BottomSheet({ isOpen, onClose, title, children, height = 'auto' 
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className={cn(
-              "fixed bottom-0 left-0 right-0 z-[110] bg-surface-card text-text-main border-t border-border-subtle rounded-t-3xl shadow-2xl flex flex-col md:max-w-2xl md:mx-auto md:rounded-3xl md:bottom-6 md:border md:h-[85vh] md:left-1/2 md:-translate-x-1/2",
+              "fixed bottom-0 left-0 right-0 z-[110] bg-surface-card text-text-main border-t border-border-subtle rounded-t-3xl shadow-2xl flex flex-col md:h-[85dvh]",
               heightClass
             )}
             drag="y"
@@ -63,12 +64,12 @@ export function BottomSheet({ isOpen, onClose, title, children, height = 'auto' 
             }}
           >
             {/* Handle Bar */}
-            <div className="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
+            <div className="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing shrink-0">
               <div className="w-12 h-1.5 bg-border-subtle rounded-full" />
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 pb-4 border-b border-border-subtle">
+            <div className="flex items-center justify-between px-6 pb-4 border-b border-border-subtle shrink-0">
               <h3 className="text-lg font-black tracking-tight">{title}</h3>
               <button
                 onClick={onClose}
@@ -78,10 +79,17 @@ export function BottomSheet({ isOpen, onClose, title, children, height = 'auto' 
               </button>
             </div>
 
-            {/* Content Area */}
-            <div className="p-6 overflow-y-auto flex-1 overscroll-contain">
+            {/* Scrollable Content Area */}
+            <div className="px-6 py-4 overflow-y-auto flex-1 min-h-0 overscroll-contain">
               {children}
             </div>
+
+            {/* Sticky Footer — always visible */}
+            {footer && (
+              <div className="shrink-0 px-6 py-4 border-t border-border-subtle bg-surface-card">
+                {footer}
+              </div>
+            )}
           </motion.div>
         </>
       )}

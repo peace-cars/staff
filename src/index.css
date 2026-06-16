@@ -122,3 +122,21 @@ h1, h2, h3, h4, h5, h6 {
               box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
+@keyframes enter {
+  0% { transform: translateY(-100%) scale(0.9); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes leave {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-100%) scale(0.9); opacity: 0; }
+}
+
+.animate-enter {
+  animation: enter 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-leave {
+  animation: leave 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+

@@ -13,10 +13,13 @@ import {
   Moon,
   Search,
   Download,
+  Wallet,
+  X,
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../lib/auth';
+import { Toaster, toast } from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { usePwaInstall } from '../../hooks/usePwaInstall';
@@ -71,10 +74,15 @@ export function AppShell({
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-bg-base text-text-main font-sans overflow-x-hidden">
-      {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 bg-surface-card/80 backdrop-blur-xl border-b border-border-subtle z-[60] px-6 py-4 h-[76px]">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
+    <div className="flex flex-col h-[100dvh] w-full bg-bg-base text-text-main font-sans overflow-hidden fixed inset-0">
+      {/* Background Decoration */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#0033FF]/20 via-[#0033FF]/5 to-transparent dark:from-[#0033FF]/40 dark:via-[#020A2F] dark:to-[#050511]" />
+      </div>
+
+      {/* Top Header (Floating Elements) */}
+      <header className="fixed top-0 left-0 right-0 z-[60] px-4 sm:px-6 py-4 h-[76px] pointer-events-none">
+        <div className="w-full mx-auto flex items-center justify-between h-full pointer-events-auto">
           <div className="flex items-center gap-4">
             <div className="relative">
               <div
@@ -114,6 +122,12 @@ export function AppShell({
               </button>
             )}
             <button
+              onClick={() => navigate('/wallet')}
+              className="p-2.5 bg-surface-card border border-border-subtle rounded-xl hover:bg-surface-hover transition-all text-emerald-500 hover:text-emerald-400"
+            >
+              <Wallet size={16} />
+            </button>
+            <button
               onClick={toggleTheme}
               className="p-2.5 bg-surface-card border border-border-subtle rounded-xl hover:bg-surface-hover transition-all text-text-secondary"
             >
@@ -137,76 +151,97 @@ export function AppShell({
                 )}
               </button>
 
+              <AnimatePresence>
               {showNotifs && (
-                <div className="absolute right-0 mt-3 w-80 bg-surface-card border border-border-subtle rounded-2xl shadow-2xl overflow-hidden z-[200]">
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-border-subtle bg-bg-secondary/30">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[12px] font-black text-text-main uppercase tracking-tight">
-                        Notifications
-                      </span>
-                      {unreadCount > 0 && (
-                        <span className="bg-primary-main text-white text-[9px] px-1.5 py-0.5 rounded-md">
-                          {unreadCount}
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm pointer-events-auto">
+                  {/* Click outside to close */}
+                  <div className="absolute inset-0" onClick={onToggleNotifs} />
+                  
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="relative w-full max-w-md bg-surface-card border border-border-subtle rounded-2xl shadow-2xl overflow-hidden z-10"
+                  >
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle bg-bg-secondary/30">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-black text-text-main uppercase tracking-tight">
+                          Notifications
                         </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={onMarkAllRead}
-                      className="text-[10px] text-primary-main font-bold hover:underline uppercase tracking-wider"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="max-h-[350px] overflow-y-auto divide-y divide-border-subtle/30 no-scrollbar">
-                    {notifications.length === 0 ? (
-                      <div className="p-8 text-center flex flex-col items-center gap-2 text-text-muted">
-                        <Bell size={20} className="opacity-30" />
-                        <p className="text-[11px] font-bold uppercase tracking-wider">
-                          No new alerts
-                        </p>
+                        {unreadCount > 0 && (
+                          <span className="bg-primary-main text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold">
+                            {unreadCount}
+                          </span>
+                        )}
                       </div>
-                    ) : (
-                      notifications.slice(0, 8).map((n) => (
-                        <div
-                          key={n.id}
-                          className={cn(
-                            'px-5 py-3 hover:bg-bg-secondary/40 cursor-pointer transition-colors',
-                            !n.isRead && 'bg-primary-main/[0.03]',
-                          )}
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={onMarkAllRead}
+                          className="text-[11px] text-primary-main font-bold hover:underline uppercase tracking-wider"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <p
-                              className={cn(
-                                'text-[12px] font-bold leading-tight',
-                                !n.isRead ? 'text-text-main' : 'text-text-muted',
-                              )}
-                            >
-                              {n.title}
-                            </p>
-                            {!n.isRead && (
-                              <div className="w-1.5 h-1.5 bg-primary-main rounded-full mt-1 shrink-0" />
-                            )}
-                          </div>
-                          <p className="text-[11px] text-text-muted mt-1 line-clamp-2 leading-relaxed">
-                            {n.body}
+                          Clear
+                        </button>
+                        <button 
+                          onClick={onToggleNotifs}
+                          className="text-text-secondary hover:text-text-main transition-colors"
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="max-h-[60vh] overflow-y-auto divide-y divide-border-subtle/30 no-scrollbar">
+                      {notifications.length === 0 ? (
+                        <div className="p-12 text-center flex flex-col items-center gap-3 text-text-muted">
+                          <Bell size={24} className="opacity-30" />
+                          <p className="text-[12px] font-bold uppercase tracking-wider">
+                            No new alerts
                           </p>
                         </div>
-                      ))
-                    )}
-                  </div>
-                  <div className="p-2 border-t border-border-subtle text-center bg-bg-secondary/10">
-                    <button
-                      onClick={() => {
-                        navigate('/notifications');
-                        onToggleNotifs?.();
-                      }}
-                      className="text-[10px] font-black text-primary-main uppercase tracking-widest hover:underline"
-                    >
-                      View All
-                    </button>
-                  </div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div
+                            key={n.id}
+                            className={cn(
+                              'px-5 py-4 hover:bg-bg-secondary/40 cursor-pointer transition-colors',
+                              !n.isRead && 'bg-primary-main/[0.03]',
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <p
+                                className={cn(
+                                  'text-[13px] font-bold leading-tight',
+                                  !n.isRead ? 'text-text-main' : 'text-text-muted',
+                                )}
+                              >
+                                {n.title}
+                              </p>
+                              {!n.isRead && (
+                                <div className="w-2 h-2 bg-primary-main rounded-full mt-1 shrink-0" />
+                              )}
+                            </div>
+                            <p className="text-[12px] text-text-muted mt-2 line-clamp-3 leading-relaxed">
+                              {n.body}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="p-3 border-t border-border-subtle text-center bg-bg-secondary/10">
+                      <button
+                        onClick={() => {
+                          navigate('/notifications');
+                          onToggleNotifs?.();
+                        }}
+                        className="text-[11px] font-black text-primary-main uppercase tracking-widest hover:underline"
+                      >
+                        View All
+                      </button>
+                    </div>
+                  </motion.div>
                 </div>
               )}
+              </AnimatePresence>
             </div>
 
             <button
@@ -223,13 +258,14 @@ export function AppShell({
       <main
         ref={contentRef}
         tabIndex={-1}
-        className="relative z-10 mx-auto w-full max-w-7xl px-4 md:px-8 pt-[100px] pb-32"
+        className="flex-1 relative z-10 w-full px-4 sm:px-6 pt-[100px] flex flex-col min-h-0 mx-auto"
       >
         {children}
       </main>
 
       {/* Bottom Mobile Navigation */}
       <nav
+        id="bottom-nav"
         className="fixed inset-x-0 bottom-0 z-100 px-3 pb-2 pointer-events-none"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 8px) + 8px)' }}
       >
@@ -280,6 +316,9 @@ export function AppShell({
           })}
         </div>
       </nav>
+      
+      {/* Global Toaster placed securely inside AppShell */}
+      <Toaster position="top-center" toastOptions={{ style: { zIndex: 999999, pointerEvents: 'auto' } }} />
     </div>
   );
 }

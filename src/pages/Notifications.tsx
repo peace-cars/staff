@@ -88,16 +88,15 @@ export default function Notifications() {
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full animate-in fade-in duration-500">
+      <div className="shrink-0 pb-5 z-40 bg-bg-base/90 backdrop-blur-xl flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl bg-surface-hover hover:bg-surface-hover/80 text-text-secondary transition-all">
             <ChevronLeft size={18} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-text-main tracking-tight">Notifications</h1>
-            <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest leading-none mt-0.5">
+            <h1 className="text-[32px] sm:text-[36px] font-black text-text-main tracking-tight leading-none mb-1">Notifications</h1>
+            <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest leading-none mt-0.5 opacity-70">
               {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
             </p>
           </div>
@@ -111,6 +110,9 @@ export default function Notifications() {
           </button>
         )}
       </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
+        <div className="space-y-6">
 
       {/* Content */}
       {loading ? (
@@ -161,6 +163,8 @@ export default function Notifications() {
           ))}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }
