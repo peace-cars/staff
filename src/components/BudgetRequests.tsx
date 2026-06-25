@@ -20,7 +20,7 @@ export default function BudgetRequests() {
   const fetchBudgets = async () => {
     if (!session) return;
     try {
-      await fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-budgets`, {
+      await fetchWithCache('/staff-budgets', {
         headers: { Authorization: `Bearer ${session.access_token}` }
       }, (data) => {
         setBudgets(Array.isArray(data) ? data : []);

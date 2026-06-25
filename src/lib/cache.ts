@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'peace_staff_cache_';
-import { unwrapApiResponse } from './api';
+import { apiFetch } from './api';
 const CACHE_TTL_24H = 24 * 60 * 60 * 1000; // 24 hours — persistent offline cache
 const CACHE_TTL_DEFAULT = 30 * 1000; // 30s in-memory default
 
@@ -84,6 +84,7 @@ export const apiCache = {
   }
 };
 
+
 /**
  * Stale-While-Revalidate fetcher with 2-layer persistent cache.
  * 1. Instantly returns cached data (from memory or localStorage) — no flicker.
@@ -92,12 +93,12 @@ export const apiCache = {
  * 4. On network failure, serves stale data gracefully.
  */
 export async function fetchWithCache(
-  url: string,
-  options: RequestInit = {},
+  endpoint: string,
+  options: any = {},
   onData: (data: any) => void,
   ttl: number = 24 * 60 * 60 * 1000 // 24h default TTL for freshness check
 ) {
-  const cacheKey = `${url}_${options.method || 'GET'}_${JSON.stringify(options.body || '')}`;
+  const cacheKey = `${endpoint}_${options.method || 'GET'}_${JSON.stringify(options.body || '')}`;
 
   // 1. Serve cached data immediately (SWR: stale-while-revalidate)
   const cached = apiCache.get(cacheKey, ttl);
@@ -107,12 +108,7 @@ export async function fetchWithCache(
 
   // 2. Fetch fresh data in background
   try {
-    const res = await fetch(url, options);
-    if (!res.ok) {
-      if (res.status === 401) throw Object.assign(new Error('Unauthorized'), { status: 401 });
-      throw new Error(`Fetch failed with status ${res.status}`);
-    }
-    const freshData = unwrapApiResponse(await res.json());
+    const freshData = await apiFetch(endpoint, options);
 
     // 3. Only update UI if data actually changed (prevents unnecessary re-renders)
     const cachedStr = cached ? JSON.stringify(cached) : null;
@@ -124,12 +120,12 @@ export async function fetchWithCache(
     }
     return freshData;
   } catch (err: any) {
-    console.warn(`[Cache SWR] Revalidation failed for ${url}:`, err?.message || err);
+    console.warn(`[Cache SWR] Revalidation failed for ${endpoint}:`, err?.message || err);
     // Fallback: serve stale data even beyond TTL for offline support
     if (cached === null) {
       const offline = apiCache.getOffline(cacheKey);
       if (offline !== null) {
-        console.info(`[Cache SWR] Serving offline data for ${url}`);
+        console.info(`[Cache SWR] Serving offline data for ${endpoint}`);
         onData(offline);
       }
     }

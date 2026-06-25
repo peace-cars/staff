@@ -8,6 +8,7 @@ import { ScrollToTop } from './components/ui/ScrollToTop';
 import { supabase } from './lib/supabase';
 import { Toaster, toast } from 'react-hot-toast';
 const Login = lazy(() => import('./pages/Login'));
+const AuthCallback = lazy(() => import('./pages/AuthCallback'));
 const Signup = lazy(() => import('./pages/Signup'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InspectionForm = lazy(() => import('./pages/InspectionForm'));
@@ -233,6 +234,7 @@ export default function App() {
                       <Signup />
                     </ApplePageTransition>
                   } />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
                   
                   <Route path="/" element={
                     <ProtectedRoute>

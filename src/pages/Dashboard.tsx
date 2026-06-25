@@ -29,8 +29,8 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
   // Attempt synchronous cache read to prevent UI flicker
   const initialSyncState = (() => {
     if (!session) return true;
-    const perfCached = apiCache.get(`${API_URL}/staff-performance/me_GET_""`);
-    const leadsCached = apiCache.get(`${API_URL}/trade-in-requests/me_GET_""`);
+    const perfCached = apiCache.get(`/staff-performance/me_GET_""`);
+    const leadsCached = apiCache.get(`/trade-in-requests/me_GET_""`);
     return !(perfCached && leadsCached);
   })();
 
@@ -63,7 +63,7 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
       }
     };
 
-    fetchWithCache(`${API_URL}/staff-performance/me`, { headers }, (data) => {
+    fetchWithCache('/staff-performance/me', { headers }, (data) => {
       setProfile((prev: any) => ({ ...prev, ...data }));
       loadedPerf = true;
       completeSync();
@@ -73,7 +73,7 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
       completeSync();
     });
 
-    fetchWithCache(`${API_URL}/trade-in-requests/me`, { headers }, (data) => {
+    fetchWithCache('/trade-in-requests/me', { headers }, (data) => {
       setLeads(Array.isArray(data) ? data : []);
       loadedLeads = true;
       completeSync();
@@ -84,11 +84,11 @@ export default function Dashboard({ activeTab = 'leads' }: DashboardProps) {
     });
 
     // Fetch alerts & messages counts
-    fetchWithCache(`${API_URL}/notifications?recipientId=${session.user.id}`, { headers }, (data) => {
+    fetchWithCache(`/notifications?recipientId=${session.user.id}`, { headers }, (data) => {
       if (Array.isArray(data)) setUnreadAlerts(data.filter(n => !n.isRead).length);
     }).catch(console.error);
 
-    fetchWithCache(`${API_URL}/messages/conversations`, { headers }, (data) => {
+    fetchWithCache('/messages/conversations', { headers }, (data) => {
       if (Array.isArray(data)) setActiveConvs(data.length);
     }).catch(console.error);
 

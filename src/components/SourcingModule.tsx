@@ -40,7 +40,7 @@ export default function SourcingModule() {
     else setRefreshing(true);
     
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    fetchWithCache(`${apiUrl}/sourcing-requests/assigned`, {
+    fetchWithCache(`/sourcing-requests/assigned`, {
       headers: { 'Authorization': `Bearer ${session.access_token}` }
     }, (data) => {
       setRequests(Array.isArray(data) ? data : []);

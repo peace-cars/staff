@@ -13,14 +13,13 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const cacheKey = session ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications?recipientId=${session.user.id}_GET_""` : '';
+  const cacheKey = session ? `/notifications?recipientId=${session.user.id}_GET_""` : '';
 
   useEffect(() => {
     if (!session) return;
-    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications?recipientId=${session.user.id}`;
     
     fetchWithCache(
-      url,
+      `/notifications?recipientId=${session.user.id}`,
       { headers: { 'Authorization': `Bearer ${session.access_token}` } },
       (data) => {
         setNotifications(Array.isArray(data) ? data : []);

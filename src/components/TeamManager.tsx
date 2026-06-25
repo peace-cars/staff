@@ -20,7 +20,7 @@ export default function TeamManager() {
   const fetchTeam = async () => {
     if (!session) return;
     try {
-      await fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-performance/branch-roster`, {
+      await fetchWithCache('/staff-performance/branch-roster', {
         headers: { Authorization: `Bearer ${session.access_token}` }
       }, (data) => {
         setTeam(Array.isArray(data) ? data : []);

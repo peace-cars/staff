@@ -35,7 +35,7 @@ export default function InventoryModule() {
     if (!session) return;
     try {
       // Leveraging backend scoping: Staff token returns only their branch
-      await fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/vehicles`, {
+      await fetchWithCache('/vehicles', {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       }, (data) => {
         setVehicles(Array.isArray(data) ? data : []);

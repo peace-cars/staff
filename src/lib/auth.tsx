@@ -33,6 +33,7 @@ interface AuthContextType {
     fullName: string,
     phone: string,
   ) => Promise<{ error?: string }>;
+  loginWithGoogle: () => Promise<{ error?: string }>;
   logout: () => void;
 }
 
@@ -41,6 +42,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   login: async () => ({}),
   signup: async () => ({}),
+  loginWithGoogle: async () => ({}),
   logout: () => {},
 });
 
@@ -214,8 +216,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = async (): Promise<{ error?: string }> => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) return { error: error.message };
+      return {};
+    } catch (err: any) {
+      return { error: err.message || 'Network error' };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ session, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ session, loading, login, signup, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

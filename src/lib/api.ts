@@ -54,7 +54,7 @@ async function attemptTokenRefresh(): Promise<string | null> {
     console.error('[Staff API] Token refresh failed (network/server error):', err);
     // DO NOT force logout on network errors
     onTokenRefreshed(null);
-    return null;
+    throw err;
   } finally {
     isRefreshing = false;
   }

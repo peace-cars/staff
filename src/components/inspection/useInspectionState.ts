@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
-import { unwrapApiResponse } from '../../lib/api';
+import { unwrapApiResponse, API_URL } from '../../lib/api';
 import confetti from 'canvas-confetti';
 import localforage from 'localforage';
 import { fetchWithCache } from '../../lib/cache';
@@ -201,7 +201,7 @@ export function useInspectionState(leadId: string | undefined) {
 
       setSyncingQueue(true);
       setSyncStatus(`Syncing ${queue.length} offline report(s)...`);
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = API_URL;
 
       const remainingQueue = [];
 
@@ -299,18 +299,18 @@ export function useInspectionState(leadId: string | undefined) {
     if (!session) return;
     const headers = { 'Authorization': `Bearer ${session.access_token}` };
 
-    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/staff-performance/me`, { headers }, (data) => {
+    fetchWithCache('/staff-performance/me', { headers }, (data) => {
       setProfile(data);
     }).catch(console.error);
 
-    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/trade-in-requests/${leadId}`, { headers }, (data) => {
+    fetchWithCache(`/trade-in-requests/${leadId}`, { headers }, (data) => {
       setLead(data);
     }).catch(err => {
       console.error(err);
       setFetchError(err.message || 'Access denied');
     });
 
-    fetchWithCache(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/settings`, { headers }, (settings) => {
+    fetchWithCache('/settings', { headers }, (settings) => {
       if (settings.evaluation_commission_percent) {
         setCommRate(parseFloat(settings.evaluation_commission_percent));
       }
@@ -370,7 +370,7 @@ export function useInspectionState(leadId: string | undefined) {
     }
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = API_URL;
       const authHeader = { 'Authorization': `Bearer ${session.access_token}` };
       const updatedChecklist = { ...checklist };
 

@@ -23,7 +23,7 @@ export default function TasksManager() {
   const fetchTasks = async () => {
     if (!session) return;
     try {
-      await fetchWithCache(`${API_URL}/staff-tasks/my-tasks`, {
+      await fetchWithCache(`/staff-tasks/my-tasks`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
       }, (data) => {
         setTasks(Array.isArray(data) ? data : []);
@@ -37,7 +37,7 @@ export default function TasksManager() {
   const fetchLeads = async () => {
     if (!session) return;
     try {
-      await fetchWithCache(`${API_URL}/trade-in-requests/me`, {
+      await fetchWithCache(`/trade-in-requests/me`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
       }, (data) => {
         setLeads(Array.isArray(data) ? data : []);
